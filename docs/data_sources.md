@@ -61,13 +61,13 @@ HRRP file (1) ──CCN── General Info (2) ──CCN── Supplemental / Ta
 
 > penalty $ ≈ (1 − payment adjustment factor) × the hospital's FY2026 Medicare fee-for-service **base operating DRG payments**
 
-The factor is floored at 0.97 (max 3% cut). It's computed from Σ over conditions of (that condition's share of base operating DRG payments) × max(0, ERR − peer-group median ERR), scaled by a budget-neutrality modifier. *I confirmed the 0.97 cap, the peer quintiles, and the base-operating-DRG scope on CMS pages. I couldn't get the exact formula text from the 2025 Federal Register rule here, so check it against the HRRP section of the FY2026 final rule (FR doc 2025-14681) before coding.*
+**Formula, now verified against the regulation (42 CFR 412.154(c) and 412.152):** the factor is the higher of 0.97 (the floor for FY2015 onward) and *1 − (aggregate payments for excess readmissions ÷ aggregate payments for all discharges)*. Payments for excess readmissions add up, over the six conditions, *base operating DRG payment for the condition × number of admissions × (ERR − peer-group median ERR) × neutrality modifier*. Base operating DRG payment means the wage-adjusted DRG operating payment plus new-technology add-ons. It **excludes** IME, DSH, outlier and low-volume payments and ignores Value-Based Purchasing adjustments.
 
 The factor is exact. The dollar base is the approximate part:
 
 1. **No public file gives FY2026 base operating DRG payments per hospital.** The closest is HCRIS `DRG Amounts Other Than Outlier Payments`. It's a reasonable proxy but:
    - it's the hospital's own **cost-report year**, not the federal year (Oct 1 to Sep 30) the factor applies to. Many hospitals' fiscal years end Jun 30 or Dec 31, so the base is 1 to 3 years old and needs aligning or labeling;
-   - it may already be net of the HRRP and Value-Based Purchasing adjustments of that year, so it isn't a clean "before penalty" figure;
+   - HCRIS line 1 already leaves out outliers, and DSH and IME are reported on separate lines, so its scope is close to the regulatory definition. But it may already be net of that year's HRRP and Value-Based Purchasing adjustments, which the regulation's base leaves out, so it isn't a clean "before penalty" figure;
    - the latest years are incomplete (filing lag), and as-submitted reports can be revised later.
    - *Possible cross-check, unconfirmed:* Worksheet E Part A of the 2552-10 may have a line for the hospital's readmissions adjustment amount. If it's filled in, that's a hospital-reported HRRP dollar figure to compare against. I'll check the HCRIS documentation before relying on it.
 2. **Fee-for-service only.** The penalty doesn't apply to Medicare Advantage payments (CMS did not finalize adding MA), and HCRIS DRG amounts are FFS. So don't scale by total Medicare revenue from SEC filings.
