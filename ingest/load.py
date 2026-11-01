@@ -27,7 +27,7 @@ CONDITIONS = {
     "pn": r"\bpn\b|pneumonia",
     "copd": r"copd",
     "cabg": r"cabg|bypass",
-    "tha_tka": r"tha|tka|hip|knee",
+    "tha_tka": r"\btha\b|\btka\b|hip|knee",
 }
 # Metric patterns for the per-condition columns of the supplemental file.
 COND_METRICS = {
@@ -156,7 +156,7 @@ def load_sec(con):
                         rows.append({
                             "cik": str(j.get("cik")), "entity_name": j.get("entityName"),
                             "taxonomy": taxonomy, "tag": tag, "label": body.get("label"),
-                            "unit": unit, "start": f.get("start"), "end": f.get("end"),
+                            "unit": unit, "start_date": f.get("start"), "end_date": f.get("end"),
                             "val": f.get("val"), "fy": f.get("fy"), "fp": f.get("fp"),
                             "form": f.get("form"), "filed": f.get("filed"),
                             "frame": f.get("frame"), "accn": f.get("accn"),
