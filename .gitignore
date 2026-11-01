@@ -1,0 +1,8 @@
+# secrets
+.env
+# downloaded data and the local database are rebuilt by the pipeline, never committed
+data/
+*.duckdb
+*.duckdb.wal
+__pycache__/
+.venv/
