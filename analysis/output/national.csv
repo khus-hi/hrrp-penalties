@@ -1,0 +1,2 @@
+hospitals_in_hrrp_file,hospitals_with_cms_factor,hospitals_penalized,pct_penalized,hospitals_at_3pct_cap,mean_factor,hospitals_estimable,penalized_but_not_estimable,est_total_penalty_usd,median_penalty_penalized_usd,max_penalty_usd,est_total_base_drg_usd
+3055,2937,2302,78.4,15,0.9966,2900,23,315602534.0,52443.0,5846204.0,85706654970.0

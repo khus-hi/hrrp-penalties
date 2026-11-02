@@ -1,0 +1,7 @@
+condition,hospitals_where_it_contributes,est_penalty_usd,pct_of_total
+Pneumonia,1418,102510988.0,32.5
+Heart failure,1405,71721304.0,22.7
+AMI,1312,45972328.0,14.6
+CABG,524,40435938.0,12.8
+Hip/knee,1260,39395679.0,12.5
+COPD,1405,15566298.0,4.9

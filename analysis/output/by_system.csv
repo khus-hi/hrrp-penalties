@@ -1,0 +1,6 @@
+parent_system,hospitals_in_hrrp_file,with_cms_factor,penalized,pct_penalized,mean_factor,estimable,est_total_penalty_usd,est_avg_penalty_penalized_usd,penalty_pct_of_base_drg
+HCA Healthcare,145,144,137,95.1,0.9945,144,26138176.0,190790.0,0.569
+Tenet Healthcare,61,59,46,78.0,0.9942,59,4870438.0,105879.0,0.47
+Community Health Systems,50,49,44,89.8,0.9953,49,4396223.0,99914.0,0.55
+Universal Health Services,25,22,21,95.5,0.9962,22,3005030.0,143097.0,0.469
+Not one of the four chains,2774,2663,2054,77.1,0.9967,2626,277192667.0,136481.0,0.369

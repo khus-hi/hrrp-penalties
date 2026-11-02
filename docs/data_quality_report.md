@@ -1,33 +1,33 @@
 # Data-quality report
 
-_Generated 2026-11-02 17:46 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
+_Generated 2026-11-02 17:53 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
 
 ## Join funnel (cumulative)
 
 | step_order | step | hospitals_remaining | dropped_here |
 |---|---|---|---|
-| 1 | In CMS FY2026 HRRP hospital file | 3,055 |  |
-| 2 | + at least one non-suppressed ERR | 2,833 | 222 |
-| 3 | + payment adjustment factor (IPPS supplemental file) | 2,791 | 42 |
-| 4 | + in Hospital General Information | 2,776 | 15 |
-| 5 | + cost report with Medicare base DRG payments | 2,759 | 17 |
-| 6 | + county FIPS found | 2,752 | 7 |
-| 7 | + ACS income and age for that county | 2,733 | 19 |
+| 1 | In CMS FY2026 HRRP hospital file | 3055 |  |
+| 2 | + at least one non-suppressed ERR | 2833 | 222 |
+| 3 | + payment adjustment factor (IPPS supplemental file) | 2791 | 42 |
+| 4 | + in Hospital General Information | 2776 | 15 |
+| 5 | + cost report with Medicare base DRG payments | 2759 | 17 |
+| 6 | + county FIPS found | 2752 | 7 |
+| 7 | + ACS income and age for that county | 2733 | 19 |
 
 
 ## Coverage by source (independent)
 
 | source | matched | total | pct |
 |---|---|---|---|
-| payment adjustment factor (supplemental) | 2,937 | 3,055 | 96.1 |
-| payment adjustment factor (Table 15) | 2,937 | 3,055 | 96.1 |
-| General Information | 3,035 | 3,055 | 99.3 |
-| cost report: any report | 3,034 | 3,055 | 99.3 |
-| cost report: Medicare base DRG payments | 3,002 | 3,055 | 98.3 |
-| star rating | 2,654 | 3,055 | 86.9 |
-| county FIPS | 3,028 | 3,055 | 99.1 |
-| ACS county income | 3,008 | 3,055 | 98.5 |
-| one of the four public chains | 281 | 3,055 | 9.2 |
+| payment adjustment factor (supplemental) | 2937 | 3055 | 96.1 |
+| payment adjustment factor (Table 15) | 2937 | 3055 | 96.1 |
+| General Information | 3035 | 3055 | 99.3 |
+| cost report: any report | 3034 | 3055 | 99.3 |
+| cost report: Medicare base DRG payments | 3002 | 3055 | 98.3 |
+| star rating | 2654 | 3055 | 86.9 |
+| county FIPS | 3028 | 3055 | 99.1 |
+| ACS county income | 3008 | 3055 | 98.5 |
+| one of the four public chains | 281 | 3055 | 9.2 |
 
 
 ## Unmatched CCNs by reason
@@ -38,8 +38,8 @@ _Generated 2026-11-02 17:46 UTC by `python -m models.build` from the files in da
 | cost report has no Medicare base DRG amount | 32 |
 | no county FIPS (name and ZIP both failed) | 27 |
 | no cost report in HCRIS file | 21 |
-| not in Hospital General Information | 20 |
 | county FIPS found but not in ACS 2024 (e.g. old CT county) | 20 |
+| not in Hospital General Information | 20 |
 | in IPPS supplemental file but not in HRRP hospital file | 8 |
 
 
@@ -49,20 +49,20 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | condition | rows | err_reported | err_missing | err_na | readmissions_too_few | discharges_missing | footnote_codes_seen |
 |---|---|---|---|---|---|---|---|
-| ami | 3,055 | 1,736 | 1,319 | 1,319 | 496 | 1,748 | 5, 29, 7, 1 |
-| cabg | 3,055 | 878 | 2,177 | 2,177 | 515 | 2,674 | 5, 1, 7, 29 |
-| copd | 3,055 | 2,323 | 732 | 732 | 778 | 1,503 | 5, 7, 1, 29 |
-| hf | 3,055 | 2,621 | 434 | 434 | 305 | 731 | 7, 1, 29, 5 |
-| pn | 3,055 | 2,715 | 340 | 340 | 395 | 727 | 29, 5, 1, 7 |
-| tha_tka | 3,055 | 1,447 | 1,608 | 1,608 | 1,194 | 2,705 | 1, 7, 5, 29 |
+| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 7, 5, 29, 1 |
+| cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 29, 5, 7, 1 |
+| copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 7, 1, 5, 29 |
+| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 1, 5, 29, 7 |
+| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 5, 1, 7, 29 |
+| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 1, 5, 29, 7 |
 
 
 ## Text values turned into NULL
 
 | field | raw_value | n |
 |---|---|---|
-| hrrp err | N/A | 6,610 |
-| star rating | Not Available | 2,245 |
+| hrrp err | N/A | 6610 |
+| star rating | Not Available | 2245 |
 
 
 ## IPPS spreadsheet columns not found (left NULL)
@@ -101,12 +101,12 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | cost_report_fy_end_year | hospitals |
 |---|---|
-| 2,024 | 1,825 |
-| 2,025 | 1,209 |
+| 2024 | 1825 |
+| 2025 | 1209 |
 |  | 21 |
 
 
-## Assertions (0 failing)
+## Assertions (1 failing)
 
 | test | failing_rows | result |
 |---|---|---|
@@ -122,3 +122,8 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 | Medicare base DRG payments are not negative | 0 | pass |
 | county FIPS is 5 digits | 0 | pass |
 | ACS median income has no Census sentinel codes left | 0 | pass |
+| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS | 624 | FAIL |
+| condition shares sum to 1 for every penalized hospital | 0 | pass |
+| condition dollars add up to hospital dollars | 0 | pass |
+| no penalty above 3% of the base | 0 | pass |
+| unpenalized hospitals (factor = 1) have $0 | 0 | pass |
