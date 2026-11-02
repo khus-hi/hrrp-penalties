@@ -173,7 +173,12 @@ def load_sec(con):
 
 
 def load_acs(con):
-    data = json.loads((C.RAW / "acs_2024_acs5_county" / "acs_county.json").read_text())
+    path = C.RAW / "acs_2024_acs5_county" / "acs_county.json"
+    try:
+        data = json.loads(path.read_text())
+    except ValueError:
+        raise SystemExit(f"{path.relative_to(C.ROOT)} is not Census data (starts with: "
+                         f"{path.read_text()[:120]!r}). Delete it and re-run python -m ingest.download.")
     df = pd.DataFrame(data[1:], columns=data[0]).rename(columns=C.ACS_VARIABLES)
     load_df(con, "raw.acs_county", df)
 
