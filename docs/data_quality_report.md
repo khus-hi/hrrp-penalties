@@ -1,6 +1,6 @@
 # Data-quality report
 
-_Generated 2026-11-02 18:00 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
+_Generated 2026-11-02 18:02 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
 
 ## Join funnel (cumulative)
 
@@ -49,12 +49,12 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | condition | rows | err_reported | err_missing | err_na | readmissions_too_few | discharges_missing | footnote_codes_seen |
 |---|---|---|---|---|---|---|---|
-| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 1, 7, 5, 29 |
+| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 29, 7, 1, 5 |
 | cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 1, 7, 29, 5 |
-| copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 5, 29, 7, 1 |
-| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 29, 1, 7, 5 |
-| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 5, 1, 7, 29 |
-| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 1, 7, 5, 29 |
+| copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 1, 29, 5, 7 |
+| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 5, 29, 7, 1 |
+| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 29, 1, 7, 5 |
+| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 5, 29, 1, 7 |
 
 
 ## Text values turned into NULL
