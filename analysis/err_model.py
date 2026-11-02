@@ -30,7 +30,7 @@ import statsmodels.formula.api as smf
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.inspection import PartialDependenceDisplay, permutation_importance
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from statsmodels.stats.diagnostic import het_breuschpagan, linear_reset
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
@@ -185,6 +185,9 @@ def main():
     d["teaching"] = d["teaching"].astype(bool)
     missing = {c: int(df.loc[df["err_composite"].notna(), c].isna().sum()) for c in needed[1:]}
 
+    for col in ["teaching", "ownership", "dual_10pp", "log2_beds"]:
+        if d[col].nunique() < 2:
+            raise SystemExit(f"{col} has only one value among modelled hospitals; check the mart.")
     main_rhs = " + ".join(STRUCTURAL + SOCIAL)
     m_main = fit(f"err_composite ~ {main_rhs}", d)
     m_star = fit(f"err_composite ~ {main_rhs} + star_rating", d)
@@ -237,8 +240,12 @@ def main():
                                         min_samples_leaf=30, random_state=SEED)
     cv_gbm = cross_val_score(gbm, Xt, y, cv=kf, scoring="r2")
     cv_ols = cross_val_score(LinearRegression(), Xt, y, cv=kf, scoring="r2")
-    gbm.fit(Xt, y)
-    perm = permutation_importance(gbm, Xt, y, n_repeats=10, random_state=SEED, scoring="r2")
+    # Importance is measured on held-out hospitals; on training data a tree's
+    # importances are inflated by what it memorised.
+    X_tr, X_te, y_tr, y_te = train_test_split(Xt, y, test_size=0.25, random_state=SEED)
+    gbm.fit(X_tr, y_tr)
+    perm = permutation_importance(gbm, X_te, y_te, n_repeats=20, random_state=SEED, scoring="r2")
+    gbm.fit(Xt, y)  # refit on all rows for the partial-dependence plots
     imp = (pd.DataFrame({"feature": Xt.columns, "importance_r2_drop": perm.importances_mean})
            .sort_values("importance_r2_drop", ascending=False))
     fig, ax = plt.subplots(1, 3, figsize=(12, 3.6))
@@ -312,7 +319,7 @@ def main():
         f"- 5-fold cross-validated R²: linear {cv_ols.mean():.3f} (±{cv_ols.std():.3f}), "
         f"gradient-boosted tree {cv_gbm.mean():.3f} (±{cv_gbm.std():.3f}). "
         "If the tree isn't clearly better, the linear model is a fair summary.",
-        "Permutation importance (drop in R² when a feature is shuffled):",
+        "Permutation importance on a 25% held-out set (drop in R² when a feature is shuffled):",
         df_md(imp.head(8)),
         "![Partial dependence](figures/err_tree_partial_dependence.png)",
         "## Assumption checks (main model)",

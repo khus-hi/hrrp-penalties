@@ -59,8 +59,10 @@ SELECT
     cr.cr_type_of_control,
     cr.beds,
     cr.intern_resident_fte,
-    CASE WHEN cr.intern_resident_fte IS NULL THEN NULL
-         ELSE cr.intern_resident_fte > 0 END                AS is_teaching,
+    -- HCRIS leaves the resident FTE line blank when a hospital has no residents, so a
+    -- blank means 0 (non-teaching). NULL only when there is no cost report at all.
+    CASE WHEN cr.cr_fy_end IS NULL THEN NULL
+         ELSE coalesce(cr.intern_resident_fte, 0) > 0 END   AS is_teaching,
     gi.star_rating,
     gi.has_emergency_services,
 
