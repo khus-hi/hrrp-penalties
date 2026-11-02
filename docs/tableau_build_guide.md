@@ -36,7 +36,7 @@ The script checks that `ccn` is unique in `hospitals.csv`, that there is one row
 
 1. Open Tableau Public. Under **Connect**, choose **Text file** and pick `hospitals.csv`.
 2. **Fix data types before anything else.** Tableau guesses that `ccn`, `zip5` and `county_fips` are numbers, which drops leading zeros (CCN `010001` becomes `10001`). Click the `#` icon above each of these three columns and choose **String**.
-3. Set geographic roles. Click the globe or `Abc` icon:
+3. Set geographic roles (if the map later shows "51 unknown", use **Map → Edit Locations → Country/Region: United States**). Click the globe or `Abc` icon:
    - `state` → **Geographic Role → State/Province**
    - `zip5` → **Geographic Role → ZIP Code/Postcode**
 4. Drag `hospital_conditions.csv` (from the left panel, under Files) onto the canvas next to `hospitals`. Tableau draws a **relationship** (the "noodle"). Set it to `Ccn = Ccn`. Fix `ccn` to String in this table too.
@@ -127,7 +127,7 @@ Make each sheet with **Worksheet → New Worksheet** and rename its tab.
 4. Note in the caption that points sit at the ZIP's centre. CMS General Information has no street-level coordinates.
 
 ### Sheet `Top Hospitals`
-Rows: **Hospital Label**. Columns: **SUM(Est Penalty Usd)**. Sort descending. Add **Penalty Drivers** to Label or Tooltip. Filter **Has $ Estimate** = True. Use **Top N** (Filter on Hospital Label → Top → by field → Top 15 by SUM(Est Penalty Usd)).
+Rows: **Hospital Label**. Columns: **SUM(Est Penalty Usd)**. Sort descending. Add **Penalty Drivers** to Label or Tooltip. Filter **Has $ Estimate** = True. Use **Top N** (Filter on Hospital Label → Top → by field → Top 15 by SUM(Est Penalty Usd)). **After you add the dashboard filter action, right-click the new `Action (State)` / `Action (Condition)` pill on this sheet → Add to Context.** Top N filters run before ordinary filters, so without this a click on a state shows the national top 15 that happen to be in that state (often just one), not that state's own top 15.
 
 ### Sheet `Lookup – Card` (selected hospital)
 1. Filter **Is Selected Hospital** = True.
