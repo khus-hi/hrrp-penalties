@@ -1,6 +1,6 @@
 # Workbook guide: `analysis/output/hrrp_chain_workbook.xlsx`
 
-Build it with `python -m analysis.build_workbook`. Python only places the data. Every calculation is an Excel formula you can click and trace. **Yellow cells on `Inputs` are the only ones meant to be edited.** The cost inputs start blank on purpose, so no number in the workbook is invented.
+Build it with `python -m analysis.build_workbook`. Python only places the data. Every calculation is an Excel formula you can click and trace. **Yellow cells on `Inputs` are the only ones meant to be edited.** The ROI cost inputs come from a published trial (sources in `Inputs` rows 17-22). Cells marked CHOICE are assumptions, not data, and are meant to be overwritten.
 
 ## Flow
 ```
@@ -18,7 +18,12 @@ Inputs ──► Condition_Data (one row per hospital × condition)
 | B6 | Years in the CMS performance period (3) | FY2026 HRRP uses 07/2021 to 06/2024 discharges. This turns 3-year counts into a yearly figure |
 | B9 | Chain for the ROI case | Dropdown |
 | B10 | Cut the program achieves | Defaults to scenario 2 (`=B4`) |
-| B11:B14 | Enrolment share, cost per patient, fixed cost, margin per avoided readmission | Your assumptions. Left blank deliberately |
+| B11 | Enrolment share: 100% | CHOICE: enrol every HRRP-eligible discharge, which is the most expensive case |
+| B12 | Cost per patient: `=B19/B20` = $74,310 / 300 ≈ $248 | Annual cost of one transitions coach divided by patients served per year, from the Care Transitions Intervention RCT (Coleman 2006) as reported by AHRQ |
+| B13 | Fixed cost: 0 | CHOICE: the coach cost already includes salary, benefits and other expenses |
+| B14 | Margin per avoided readmission: 0 | CHOICE: the HRRP-penalty-only view. No public source gives a hospital's margin on a readmission. Row 22 shows HCUP's average readmission cost ($16,300 in 2020) for scale only |
+
+Sources (Inputs rows 19-22): [AHRQ PSNet profile of the Care Transitions Intervention](https://psnet.ahrq.gov/innovation/transition-coachesr-reduce-readmissions-medicare-patients-complex-postdischarge-needs) (coach cost $74,310, about 300 patients a year); Coleman et al., *Arch Intern Med* 2006;166:1822-8 (30-day readmissions 11.9% control vs 8.3% intervention, n = 750); [HCUP Statistical Brief #304](https://hcup-us.ahrq.gov/reports/statbriefs/sb304-readmissions-2016-2020.pdf). The trial costs are in study-era dollars and are not inflated.
 
 ## Condition_Data: the CMS formula, one condition at a time
 Columns A–K are CMS data: penalty indicator, DRG payment ratio, ERR, peer-group median ERR, neutrality modifier, eligible discharges and expected readmission rate.
@@ -90,5 +95,7 @@ What's held fixed, which is worth saying up front in an interview:
 | Net benefit | `penalty avoided + margin effect − cost` | |
 | ROI | `net benefit / cost` | |
 | Break-even cost per patient | `(penalty avoided + margin − fixed) / enrolled` | Highest per-patient cost that still breaks even |
+
+**What the default inputs show:** enrolling every eligible patient at about $248 each costs more than the HRRP penalty it avoids, for every chain, at a 20% cut in excess readmissions. The break-even cost is roughly $70-95 per patient. One avoided readmission is worth a lot of penalty, though, because HRRP charges the penalty on *all* of a hospital's Medicare base payments. The program pays off only if it is targeted at high-risk patients (lower B11) or achieves a bigger cut. The trial's 30% drop in all readmissions is much larger than a 20% cut in the excess.
 
 **The honest interview point:** for a fee-for-service hospital, avoiding a readmission removes the penalty but also removes the payment for that readmission. A care-transitions program that pays off from the HRRP penalty alone can look worse once the margin effect is entered. That's why the margin input exists.

@@ -134,7 +134,7 @@ def build(hosp, cond, sec):
         "Medicare cost reports (base DRG payments, latest report, annualised), CMS All Owners (parent system), SEC EDGAR companyfacts (10-K).",
         "Key caveats: penalty dollars use 2024-25 cost-report payments, not FY2026 actuals; chain mapping is today's ownership;",
         "SEC figures are company-wide (all hospitals, all payers); scenarios hold peer-group medians and the neutrality modifier fixed.",
-        "Blank cost inputs on the Inputs sheet are deliberate: enter your own assumptions. Nothing is pre-filled.",
+        "ROI cost inputs come from the Care Transitions Intervention trial (AHRQ); labelled CHOICE cells are assumptions to overwrite.",
     ]
     for i, t in enumerate(lines, 1):
         ws.cell(i, 1, t).font = BOLD if i == 1 else Font()
@@ -158,13 +158,36 @@ def build(hosp, cond, sec):
     inp.add_data_validation(dv); dv.add("B9")
     put(inp, "A10", "Cut in excess readmissions the program achieves"); put(inp, "B10", "=B4", PCT, fill=INPUT_FILL)
     put(inp, "C10", "Defaults to Scenario 2. Overwrite with your own assumption.")
-    put(inp, "A11", "Share of eligible HRRP discharges enrolled"); put(inp, "B11", None, PCT, fill=INPUT_FILL)
-    put(inp, "A12", "Program cost per enrolled patient ($)"); put(inp, "B12", None, USD, fill=INPUT_FILL)
-    put(inp, "A13", "Fixed annual program cost ($): staff, software"); put(inp, "B13", None, USD, fill=INPUT_FILL)
-    put(inp, "A14", "Margin per avoided readmission ($, can be negative)"); put(inp, "B14", None, USD, fill=INPUT_FILL)
-    put(inp, "C14", "Under fee-for-service, an avoided readmission is also lost revenue. Enter the contribution margin the hospital "
-                    "would have earned (as a negative number) or a cost saving if capacity is constrained (positive). Leave blank to ignore.")
-    put(inp, "C11", "Enter your assumptions in B11:B14. They're blank on purpose, so no number here is made up.")
+    # ROI cost inputs, filled from published sources (rows 17-22). Each yellow cell either points at a
+    # sourced number or is a labelled choice. Overwrite any of them with your hospital's own figures.
+    put(inp, "A11", "Share of eligible HRRP discharges enrolled"); put(inp, "B11", 1.0, PCT, fill=INPUT_FILL)
+    put(inp, "C11", "CHOICE, not data: enrol every HRRP-eligible discharge (the most expensive case). Lower it to target high-risk patients.")
+    put(inp, "A12", "Program cost per enrolled patient ($)"); put(inp, "B12", "=B19/B20", USD, fill=INPUT_FILL)
+    put(inp, "C12", "Annual cost of one transitions coach / patients one coach serves per year (rows 19-20).")
+    put(inp, "A13", "Fixed annual program cost ($): staff, software"); put(inp, "B13", 0, USD, fill=INPUT_FILL)
+    put(inp, "C13", "CHOICE: 0, because the published coach cost already includes salary, benefits and other expenses. "
+                    "Add your own IT or management overhead here.")
+    put(inp, "A14", "Margin per avoided readmission ($, can be negative)"); put(inp, "B14", 0, USD, fill=INPUT_FILL)
+    put(inp, "C14", "CHOICE: 0 = HRRP-penalty-only view. Under fee-for-service an avoided readmission is also lost revenue: "
+                    "enter the contribution margin the hospital would have earned as a negative number. No public source gives "
+                    "this margin, so it is not pre-filled. Row 22 shows the average cost of a readmission for scale.")
+
+    put(inp, "A17", "Published sources for the ROI inputs", bold=True)
+    put(inp, "A18", "Source item"); put(inp, "B18", "Value"); put(inp, "C18", "Where it comes from")
+    for ref in ("A18", "B18", "C18"):
+        inp[ref].font, inp[ref].fill = BOLD, HEAD_FILL
+    put(inp, "A19", "Annual cost of one transitions coach ($)"); put(inp, "B19", 74310, USD)
+    put(inp, "C19", "Care Transitions Intervention RCT (Coleman et al., Arch Intern Med 2006;166:1822-8), as reported by AHRQ: "
+                    "https://psnet.ahrq.gov/innovation/transition-coachesr-reduce-readmissions-medicare-patients-complex-postdischarge-needs "
+                    "(salary, benefits, other expenses; study-era dollars, not inflated)")
+    put(inp, "A20", "Patients one coach serves per year"); put(inp, "B20", 300, "#,##0")
+    put(inp, "C20", "Same AHRQ page: 24-28 patients at a time, approximately 300 per year.")
+    put(inp, "A21", "Trial 30-day readmission rate: control vs intervention"); put(inp, "B21", "11.9% vs 8.3%")
+    put(inp, "C21", "Coleman 2006 RCT (n = 750): a 30% relative drop in all readmissions among enrolled patients. "
+                    "Our default cut (B10 = 20% of EXCESS readmissions) is smaller than that, so it is conservative.")
+    put(inp, "A22", "Average cost of a readmission, 2020, all payers ($)"); put(inp, "B22", 16300, USD)
+    put(inp, "C22", "AHRQ HCUP Statistical Brief #304 (Nationwide Readmissions Database 2020; cost, not charges): "
+                    "https://hcup-us.ahrq.gov/reports/statbriefs/sb304-readmissions-2016-2020.pdf . Reference only, not used in a formula.")
 
     S1, S2, S3, SR = "Inputs!$B$3", "Inputs!$B$4", "Inputs!$B$5", "Inputs!$B$10"
 
