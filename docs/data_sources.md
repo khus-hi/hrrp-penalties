@@ -16,7 +16,7 @@
 | 5a | CMS Hospital All Owners | API: `https://data.cms.gov/data-api/v1/dataset/029c119f-f79c-49be-9100-344d31d10344/data` · [data dictionary](https://data.cms.gov/sites/default/files/2025-05/90b341cf-89fd-41c6-bf8a-a74e0fc4d1a7/Hospital_All_Owners_Data_Dictionary.pdf) | JSON / CSV | enrollment × owner | `ENROLLMENT ID` (no CCN!) | Free, no key |
 | 5b | CMS Hospital Enrollments (needed bridge) | API: `https://data.cms.gov/data-api/v1/dataset/f6f6505c-e8b0-4d57-b258-e2b94133aaf2/data` · [guidance PDF](https://data.cms.gov/sites/default/files/2026-07/Hospital_Data_Guidance.pdf) | JSON / CSV | enrollment | `ENROLLMENT ID` ↔ `CCN` | Free, no key |
 | 6 | SEC EDGAR XBRL | `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json`, `.../companyconcept/CIK##########/us-gaap/<Tag>.json`, bulk `https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip` | JSON | company × concept × period | CIK (10-digit, zero-padded) | Free, **no key**, but must send a `User-Agent` header with your name + email; max 10 requests/second |
-| 7 | Census ACS 2024 | 5-year: `https://api.census.gov/data/2024/acs/acs5` · 1-year: `https://api.census.gov/data/2024/acs/acs1` | JSON | county | `state` + `county` FIPS | Free. API key is free (email signup, store in `.env` as `CENSUS_API_KEY`); light use works without one |
+| 7 | Census ACS 2024 | 5-year: `https://api.census.gov/data/2024/acs/acs5` · 1-year: `https://api.census.gov/data/2024/acs/acs1` | JSON | county | `state` + `county` FIPS | Free, but a key is **required** (free email signup, activate from the email, store in `.env` as `CENSUS_API_KEY`). Keyless requests now get a "Missing Key" page (checked 2026-11-02) |
 
 Nothing on this list needs a credit card or billing account.
 

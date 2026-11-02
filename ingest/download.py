@@ -160,9 +160,13 @@ def fetch_acs(force=False):
         except ValueError:
             print("  existing ACS file is not valid JSON; downloading again")
     params = {"get": ",".join(["NAME", *C.ACS_VARIABLES]), "for": "county:*"}
+    # Census now rejects keyless requests with a "Missing Key" page, so a key is required.
     key = os.getenv("CENSUS_API_KEY", "").strip()
-    if key:
-        params["key"] = key
+    if not key:
+        raise ValueError("CENSUS_API_KEY is empty in .env. Get a free key at "
+                         "https://api.census.gov/data/key_signup.html, click the activation "
+                         "link in the email Census sends, then paste the key into .env.")
+    params["key"] = key
     print(f"[get ] ACS 2024 5-year county: {C.ACS_URL}")
     r = _get(C.ACS_URL, params=params)
     # Census can answer 200 OK with an HTML/text message (e.g. a bad or unactivated
