@@ -153,14 +153,28 @@ def fetch_acs(force=False):
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / "acs_county.json"
     if path.exists() and not force:
-        print("[skip] ACS")
-        return
+        try:
+            json.loads(path.read_text())
+            print("[skip] ACS")
+            return
+        except ValueError:
+            print("  existing ACS file is not valid JSON; downloading again")
     params = {"get": ",".join(["NAME", *C.ACS_VARIABLES]), "for": "county:*"}
     key = os.getenv("CENSUS_API_KEY", "").strip()
     if key:
         params["key"] = key
     print(f"[get ] ACS 2024 5-year county: {C.ACS_URL}")
     r = _get(C.ACS_URL, params=params)
+    # Census can answer 200 OK with an HTML/text message (e.g. a bad or unactivated
+    # API key) instead of data. Check before saving so a bad file never reaches load.
+    try:
+        rows = r.json()
+        assert isinstance(rows, list) and rows and rows[0][0] == "NAME"
+    except (ValueError, AssertionError, IndexError, TypeError):
+        raise ValueError("Census did not return ACS data. First 300 characters of its reply:\n"
+                         + r.text[:300].strip()
+                         + ("\nTip: if this mentions a key, activate it from the Census email "
+                            "or leave CENSUS_API_KEY empty in .env." if key else ""))
     path.write_text(r.text)
     _log({"name": "acs_2024_acs5_county", "url": C.ACS_URL,
           "variables": list(C.ACS_VARIABLES), "file": str(path.relative_to(C.ROOT)),
