@@ -1,6 +1,6 @@
 # FY2026 HRRP penalty estimate
 
-_Generated 2026-11-02 17:53 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 1._
+_Generated 2026-11-02 17:56 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 0._
 
 ## National
 
@@ -20,25 +20,46 @@ _Generated 2026-11-02 17:53 UTC by `python -m analysis.penalty_report`. Method a
 
 ### Does the formula reproduce CMS's factor?
 
-| test | failing_rows |
-|---|---|
-| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS | 624 |
+| hospitals_compared | mismatches | max_abs_diff | median_abs_diff |
+|---|---|---|---|
+| 2945 | 0 | 5e-05 | 1.9e-05 |
 
 
-### What the FY2026 final rule says (verbatim sentences mentioning readmissions with a $ amount or hospital count)
+CMS penalty indicator values by condition:
 
-_No matching sentences found._
+| condition | penalty_indicator | n | n_err_above_median |
+|---|---|---|---|
+| ami | N | 2063 | 433 |
+| ami | Y | 882 | 882 |
+| cabg | N | 2507 | 86 |
+| cabg | Y | 438 | 438 |
+| copd | N | 1803 | 264 |
+| copd | Y | 1142 | 1142 |
+| hf | N | 1653 | 115 |
+| hf | Y | 1292 | 1292 |
+| pn | N | 1623 | 97 |
+| pn | Y | 1322 | 1322 |
+| tha_tka | N | 2239 | 556 |
+| tha_tka | Y | 706 | 706 |
+
+
+### What the FY2026 final rule says (verbatim text around HRRP mentions that include a $ amount or hospital count)
+
+_Searched 2025-14681.htm: 4,485,518 characters, 117 HRRP mentions, 1 with a $ or hospital count._
+
+> ...dex admissions,'' that are included when calculating each measure. This cohort is the set of hospitalizations that meet all the inclusion and exclusion criteria. For measure cohort details of the most recent versions of the Hospital Readmissions Reduction Program measure set, we refer readers to the measure methodology report and measure risk adjustment statistical model on our website at: https://qualitynet.cms.gov/inpatient/measures/readmission/methodology . Including MA beneficiaries in hospital outcome measures would help ensure that hospital quality would be measured across all Medicare beneficiaries and not just the Fee-For-Service (FFS) population. In 2024, 50 percent of eligible Medicare beneficiaries--or 34.3 million people--were covered by MA plans.\165\ It is projected that nearly two- thirds of all Medicare enrollees will be enrolled in MA plans by 2030.\166\ Consequently, using FFS-only beneficiaries may ex...
+
 
 ## By condition
 
 | condition | hospitals_where_it_contributes | est_penalty_usd | pct_of_total |
 |---|---|---|---|
-| Pneumonia | 1418 | 102,510,988 | 32.5 |
-| Heart failure | 1405 | 71,721,304 | 22.7 |
-| AMI | 1312 | 45,972,328 | 14.6 |
-| CABG | 524 | 40,435,938 | 12.8 |
-| Hip/knee | 1260 | 39,395,679 | 12.5 |
-| COPD | 1405 | 15,566,298 | 4.9 |
+| Pneumonia | 1321 | 103,136,580 | 32.7 |
+| Heart failure | 1291 | 72,262,282 | 22.9 |
+| AMI | 882 | 46,145,662 | 14.6 |
+| CABG | 438 | 40,072,409 | 12.7 |
+| Hip/knee | 705 | 38,318,817 | 12.1 |
+| COPD | 1142 | 15,666,784 | 5 |
 
 
 ## By parent system
@@ -54,30 +75,30 @@ _No matching sentences found._
 
 | parent_system | condition | est_penalty_usd |
 |---|---|---|
-| Community Health Systems | CABG | 1,212,156 |
-| Community Health Systems | Pneumonia | 962,824 |
-| Community Health Systems | AMI | 882,244 |
-| Community Health Systems | Heart failure | 668,665 |
-| Community Health Systems | Hip/knee | 487,148 |
-| Community Health Systems | COPD | 183,186 |
-| HCA Healthcare | Pneumonia | 8,301,764 |
-| HCA Healthcare | Heart failure | 4,963,303 |
-| HCA Healthcare | AMI | 4,824,328 |
-| HCA Healthcare | Hip/knee | 3,830,174 |
-| HCA Healthcare | CABG | 3,420,221 |
-| HCA Healthcare | COPD | 798,386 |
-| Tenet Healthcare | Pneumonia | 1,518,932 |
-| Tenet Healthcare | Hip/knee | 1,212,038 |
-| Tenet Healthcare | AMI | 715,994 |
-| Tenet Healthcare | CABG | 661,901 |
-| Tenet Healthcare | Heart failure | 649,553 |
-| Tenet Healthcare | COPD | 112,022 |
-| Universal Health Services | Pneumonia | 1,684,774 |
-| Universal Health Services | Heart failure | 648,428 |
-| Universal Health Services | CABG | 254,984 |
-| Universal Health Services | Hip/knee | 205,490 |
-| Universal Health Services | AMI | 137,570 |
-| Universal Health Services | COPD | 73,783 |
+| Community Health Systems | CABG | 1,194,269 |
+| Community Health Systems | Pneumonia | 973,903 |
+| Community Health Systems | AMI | 900,765 |
+| Community Health Systems | Heart failure | 674,987 |
+| Community Health Systems | Hip/knee | 466,878 |
+| Community Health Systems | COPD | 185,420 |
+| HCA Healthcare | Pneumonia | 8,334,795 |
+| HCA Healthcare | Heart failure | 4,998,554 |
+| HCA Healthcare | AMI | 4,840,951 |
+| HCA Healthcare | Hip/knee | 3,764,888 |
+| HCA Healthcare | CABG | 3,398,511 |
+| HCA Healthcare | COPD | 800,476 |
+| Tenet Healthcare | Pneumonia | 1,554,925 |
+| Tenet Healthcare | Hip/knee | 1,188,223 |
+| Tenet Healthcare | AMI | 728,532 |
+| Tenet Healthcare | Heart failure | 653,736 |
+| Tenet Healthcare | CABG | 638,109 |
+| Tenet Healthcare | COPD | 106,913 |
+| Universal Health Services | Pneumonia | 1,687,116 |
+| Universal Health Services | Heart failure | 655,875 |
+| Universal Health Services | CABG | 250,665 |
+| Universal Health Services | Hip/knee | 200,523 |
+| Universal Health Services | AMI | 137,060 |
+| Universal Health Services | COPD | 73,791 |
 
 
 ## By ownership type
@@ -161,11 +182,11 @@ _No matching sentences found._
 | 220077 | BAYSTATE MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9811 | 1.89 | 167,038,922 | 3,157,036 | AMI 38%, CABG 33%, Pneumonia 19%, Heart failure 7%, COPD 3% | ok: full-year cost report |
 | 220100 | SOUTH SHORE HOSPITAL | Voluntary non-profit - Private |  | 0.9848 | 1.52 | 138,691,862 | 2,108,116 | Pneumonia 63%, AMI 17%, Heart failure 15%, COPD 5% | ok: full-year cost report |
 | 220012 | CAPE COD HOSPITAL | Voluntary non-profit - Private |  | 0.9844 | 1.56 | 118,370,280 | 1,846,576 | Pneumonia 39%, Heart failure 28%, AMI 20%, Hip/knee 8%, COPD 3%, CABG 2% | ok: full-year cost report |
-| 220105 | WINCHESTER HOSPITAL | Voluntary non-profit - Private |  | 0.97 | 3 | 44,566,328 | 1,336,990 | Pneumonia 35%, Heart failure 32%, Hip/knee 27%, COPD 6%, AMI 0% | ok: full-year cost report |
+| 220105 | WINCHESTER HOSPITAL | Voluntary non-profit - Private |  | 0.97 | 3 | 44,566,328 | 1,336,990 | Pneumonia 35%, Heart failure 32%, Hip/knee 27%, COPD 6% | ok: full-year cost report |
 | 220110 | BRIGHAM AND WOMEN'S HOSPITAL | Voluntary non-profit - Private |  | 0.9948 | 0.52 | 242,315,472 | 1,260,040 | AMI 91%, Pneumonia 9% | ok: full-year cost report |
-| 220090 | MILFORD REGIONAL MEDICAL CENTER | Voluntary non-profit - Other |  | 0.9703 | 2.97 | 39,859,273 | 1,183,820 | Pneumonia 46%, Heart failure 41%, COPD 13%, AMI 0% | ok: full-year cost report |
+| 220090 | MILFORD REGIONAL MEDICAL CENTER | Voluntary non-profit - Other |  | 0.9703 | 2.97 | 39,859,273 | 1,183,820 | Pneumonia 46%, Heart failure 41%, COPD 13% | ok: full-year cost report |
 | 220073 | BROWN UNIVERSITY HEALTH MORTON HOSPITAL | Proprietary |  | 0.97 | 3 | 29,657,767 | 889,733 | Hip/knee 62%, Pneumonia 22%, Heart failure 11%, COPD 5% | ok but annualised: partial-year cost report |
-| 220008 | STURDY MEMORIAL HOSPITAL | Voluntary non-profit - Other |  | 0.9748 | 2.52 | 35,253,301 | 888,383 | Pneumonia 42%, Hip/knee 31%, Heart failure 19%, COPD 8%, AMI 0% | ok: full-year cost report |
+| 220008 | STURDY MEMORIAL HOSPITAL | Voluntary non-profit - Other |  | 0.9748 | 2.52 | 35,253,301 | 888,383 | Pneumonia 43%, Hip/knee 31%, Heart failure 19%, COPD 8% | ok: full-year cost report |
 | 220086 | BETH ISRAEL DEACONESS MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9954 | 0.46 | 177,290,161 | 815,535 | AMI 62%, CABG 32%, Pneumonia 6% | ok: full-year cost report |
 | 220036 | BOSTON MEDICAL CENTER-BRIGHTON | Proprietary |  | 0.9802 | 1.98 | 40,083,701 | 793,657 | AMI 69%, CABG 17%, Heart failure 13%, COPD 1% | ok but annualised: partial-year cost report |
 | 220116 | TUFTS MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9901 | 0.99 | 74,450,167 | 737,057 | AMI 45%, CABG 33%, Hip/knee 16%, Heart failure 3%, COPD 2%, Pneumonia 1% | ok: full-year cost report |
@@ -174,40 +195,40 @@ _No matching sentences found._
 | 220171 | LAHEY HOSPITAL & MEDICAL CENTER, BURLINGTON | Voluntary non-profit - Private |  | 0.996 | 0.4 | 143,548,607 | 574,194 | Hip/knee 39%, CABG 30%, Heart failure 23%, COPD 4%, AMI 4% | ok: full-year cost report |
 | 220029 | ANNA JAQUES HOSPITAL | Voluntary non-profit - Private |  | 0.9777 | 2.23 | 21,888,490 | 488,113 | Hip/knee 41%, Pneumonia 34%, COPD 14%, Heart failure 11% | ok: full-year cost report |
 | 220111 | GOOD SAMARITAN MEDICAL CENTER | Proprietary |  | 0.9895 | 1.05 | 45,031,320 | 472,829 | Pneumonia 42%, Heart failure 39%, Hip/knee 12%, COPD 6% | ok but annualised: partial-year cost report |
-| 220083 | BETH ISRAEL DEACONESS HOSPITAL - NEEDHAM | Voluntary non-profit - Private |  | 0.9841 | 1.59 | 26,963,030 | 428,712 | Pneumonia 72%, Heart failure 28%, AMI 0% | ok: full-year cost report |
+| 220083 | BETH ISRAEL DEACONESS HOSPITAL - NEEDHAM | Voluntary non-profit - Private |  | 0.9841 | 1.59 | 26,963,030 | 428,712 | Pneumonia 72%, Heart failure 28% | ok: full-year cost report |
 | 220080 | HOLY FAMILY HOSPITAL | Proprietary |  | 0.9859 | 1.41 | 27,342,664 | 385,532 | Hip/knee 62%, Pneumonia 16%, Heart failure 15%, COPD 5%, AMI 1% | ok but annualised: partial-year cost report |
-| 220175 | METROWEST MEDICAL CENTER | Voluntary non-profit - Private | Tenet Healthcare | 0.9864 | 1.36 | 24,521,443 | 333,492 | Pneumonia 55%, Heart failure 36%, AMI 7%, Hip/knee 2% | ok: full-year cost report |
+| 220175 | METROWEST MEDICAL CENTER | Voluntary non-profit - Private | Tenet Healthcare | 0.9864 | 1.36 | 24,521,443 | 333,492 | Pneumonia 57%, Heart failure 37%, AMI 7% | ok: full-year cost report |
 | 220035 | NORTH SHORE MEDICAL CENTER - | Voluntary non-profit - Private |  | 0.9957 | 0.43 | 75,497,790 | 324,640 | Pneumonia 97%, COPD 3% | ok: full-year cost report |
 | 220101 | NEWTON-WELLESLEY HOSPITAL | Voluntary non-profit - Private |  | 0.9958 | 0.42 | 75,083,441 | 315,350 | Hip/knee 86%, Pneumonia 14%, AMI 1% | ok: full-year cost report |
-| 220135 | FALMOUTH HOSPITAL | Voluntary non-profit - Private |  | 0.9913 | 0.87 | 36,172,972 | 314,705 | Pneumonia 69%, Heart failure 26%, COPD 5%, AMI 0% | ok: full-year cost report |
+| 220135 | FALMOUTH HOSPITAL | Voluntary non-profit - Private |  | 0.9913 | 0.87 | 36,172,972 | 314,705 | Pneumonia 69%, Heart failure 26%, COPD 5% | ok: full-year cost report |
 | 220163 | UMASS MEMORIAL MEDICAL CENTER/UNIVERSITY CAMPUS | Voluntary non-profit - Private |  | 0.9981 | 0.19 | 154,600,145 | 293,740 | CABG 71%, AMI 28%, Hip/knee 1%, COPD 1% | ok: full-year cost report |
 | 220015 | COOLEY DICKINSON HOSPITAL INC,THE | Voluntary non-profit - Private |  | 0.9907 | 0.93 | 24,348,621 | 226,442 | Heart failure 78%, Hip/knee 12%, COPD 11% | ok: full-year cost report |
 | 220001 | UMASS MEMORIAL HEALTHALLIANCE HOSPITALS | Voluntary non-profit - Other |  | 0.9921 | 0.79 | 26,301,675 | 207,783 | Pneumonia 71%, Heart failure 18%, COPD 6%, AMI 4% | ok: full-year cost report |
 | 220033 | NORTHEAST HOSPITAL CORPORATION | Voluntary non-profit - Private |  | 0.9972 | 0.28 | 70,482,666 | 197,351 | Heart failure 68%, COPD 22%, AMI 10% | ok: full-year cost report |
-| 220049 | MARLBOROUGH HOSPITAL | Voluntary non-profit - Private |  | 0.986 | 1.4 | 13,582,366 | 190,153 | Pneumonia 64%, Heart failure 21%, COPD 15%, AMI 0% | ok: full-year cost report |
-| 220019 | UMASS MEMORIAL HEALTH - HARRINGTON HOSPITAL | Voluntary non-profit - Private |  | 0.9876 | 1.24 | 14,066,062 | 174,419 | Pneumonia 51%, Heart failure 40%, COPD 8%, AMI 1% | ok: full-year cost report |
+| 220049 | MARLBOROUGH HOSPITAL | Voluntary non-profit - Private |  | 0.986 | 1.4 | 13,582,366 | 190,153 | Pneumonia 64%, Heart failure 21%, COPD 15% | ok: full-year cost report |
+| 220019 | UMASS MEMORIAL HEALTH - HARRINGTON HOSPITAL | Voluntary non-profit - Private |  | 0.9876 | 1.24 | 14,066,062 | 174,419 | Pneumonia 51%, Heart failure 40%, COPD 8% | ok: full-year cost report |
 | 220176 | ST VINCENT HOSPITAL | Proprietary | Tenet Healthcare | 0.9955 | 0.45 | 38,444,805 | 173,002 | AMI 24%, Hip/knee 23%, CABG 22%, Pneumonia 18%, Heart failure 13% | ok: full-year cost report |
 | 220002 | MOUNT AUBURN HOSPITAL | Voluntary non-profit - Private |  | 0.9955 | 0.45 | 36,366,666 | 163,650 | Pneumonia 100% | ok: full-year cost report |
-| 220066 | MERCY MEDICAL CTR | Voluntary non-profit - Private |  | 0.9931 | 0.69 | 23,187,093 | 159,991 | Pneumonia 54%, COPD 25%, Heart failure 19%, AMI 2% | ok: full-year cost report |
-| 220024 | HOLYOKE MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9925 | 0.75 | 19,359,779 | 145,198 | Pneumonia 58%, Heart failure 27%, COPD 9%, Hip/knee 6%, AMI 0% | ok: full-year cost report |
+| 220066 | MERCY MEDICAL CTR | Voluntary non-profit - Private |  | 0.9931 | 0.69 | 23,187,093 | 159,991 | Pneumonia 55%, COPD 26%, Heart failure 19% | ok: full-year cost report |
+| 220024 | HOLYOKE MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9925 | 0.75 | 19,359,779 | 145,198 | Pneumonia 58%, Heart failure 27%, COPD 9%, Hip/knee 6% | ok: full-year cost report |
 | 220108 | BETH ISRAEL DEACONESS HOSPITAL - MILTON | Government - Federal |  | 0.9958 | 0.42 | 33,816,394 | 142,029 | Pneumonia 81%, COPD 19% | ok: full-year cost report |
 | 220030 | BAYSTATE WING HOSPITAL | Voluntary non-profit - Other |  | 0.9936 | 0.64 | 14,044,512 | 89,885 | Heart failure 46%, COPD 29%, Pneumonia 26% | ok: full-year cost report |
-| 220095 | HEYWOOD HOSPITAL - | Voluntary non-profit - Private |  | 0.9948 | 0.52 | 12,399,431 | 64,477 | COPD 38%, Pneumonia 34%, Heart failure 25%, AMI 3% | ok: full-year cost report |
+| 220095 | HEYWOOD HOSPITAL - | Voluntary non-profit - Private |  | 0.9948 | 0.52 | 12,399,431 | 64,477 | COPD 40%, Pneumonia 35%, Heart failure 26% | ok: full-year cost report |
 | 220020 | SAINT ANNE'S HOSPITAL | Proprietary |  | 0.9981 | 0.19 | 32,452,519 | 61,660 | Heart failure 51%, AMI 25%, COPD 24% | ok but annualised: partial-year cost report |
-| 220084 | EMERSON HOSPITAL - | Voluntary non-profit - Private |  | 0.9978 | 0.22 | 24,771,713 | 54,498 | Pneumonia 65%, COPD 32%, AMI 2% | ok: full-year cost report |
+| 220084 | EMERSON HOSPITAL - | Voluntary non-profit - Private |  | 0.9978 | 0.22 | 24,771,713 | 54,498 | Pneumonia 67%, COPD 33% | ok: full-year cost report |
 | 220010 | MERRIMACK HEALTH LAWRENCE HOSPITAL | Voluntary non-profit - Private |  | 0.9985 | 0.15 | 35,631,910 | 53,448 | AMI 72%, Heart failure 28% | ok: full-year cost report |
 | 220046 | BERKSHIRE MEDICAL CENTER | Voluntary non-profit - Other |  | 0.9993 | 0.07 | 60,920,870 | 42,645 | Heart failure 100% | ok: full-year cost report |
-| 220065 | BAYSTATE NOBLE HOSPITAL | Voluntary non-profit - Private |  | 0.9958 | 0.42 | 9,890,059 | 41,538 | Heart failure 72%, Pneumonia 25%, Hip/knee 3%, AMI 1% | ok: full-year cost report |
+| 220065 | BAYSTATE NOBLE HOSPITAL | Voluntary non-profit - Private |  | 0.9958 | 0.42 | 9,890,059 | 41,538 | Heart failure 74%, Pneumonia 26% | ok: full-year cost report |
 | 220016 | BAYSTATE FRANKLIN MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9979 | 0.21 | 14,084,327 | 29,577 | COPD 64%, Heart failure 36% | ok: full-year cost report |
 | 220031 | BOSTON MEDICAL CENTER | Voluntary non-profit - Private |  | 0.9995 | 0.05 | 48,226,924 | 24,113 | COPD 100% | ok: full-year cost report |
 | 220177 | NANTUCKET COTTAGE HOSPITAL | Voluntary non-profit - Private |  | 0.9915 | 0.85 | 2,131,339 | 18,116 | Pneumonia 55%, Heart failure 45% | ok: full-year cost report |
-| 220098 | NASHOBA VALLEY MEDICAL CENTER | Proprietary |  | 0.9982 | 0.18 | 5,105,941 | 9,191 | Pneumonia 67%, COPD 25%, Heart failure 7%, AMI 1% | ok but annualised: partial-year cost report |
+| 220098 | NASHOBA VALLEY MEDICAL CENTER | Proprietary |  | 0.9982 | 0.18 | 5,105,941 | 9,191 | Pneumonia 67%, COPD 26%, Heart failure 7% | ok but annualised: partial-year cost report |
 | 220060 | BETH ISRAEL DEACONESS HOSPITAL PLYMOUTH | Voluntary non-profit - Private |  | 0.9999 | 0.01 | 68,204,425 | 6,820 | AMI 100% | ok: full-year cost report |
 | 220052 | SIGNATURE HEALTHCARE BROCKTON HOSPITAL | Voluntary non-profit - Other |  | 0.9984 | 0.16 | 2,109,595 | 3,375 | COPD 100% | ok: full-year cost report |
-| 220017 | CARNEY HOSPITAL | Proprietary |  | 0.9999 | 0.01 | 3,504,967 | 350 | COPD 91%, Pneumonia 9% | ok but annualised: partial-year cost report |
+| 220017 | CARNEY HOSPITAL | Proprietary |  | 0.9999 | 0.01 | 3,504,967 | 350 | Pneumonia 100% | ok but annualised: partial-year cost report |
 | 220119 | BRIGHAM AND WOMEN FAULKNER HOSPITAL | Voluntary non-profit - Private |  | 1 | 0 | 37,644,239 | 0 |  | ok: full-year cost report |
-| 220011 | CAMBRIDGE HEALTH ALLIANCE | Government - Local |  | 1 | 0 | 13,555,161 | 0 | AMI 100% | ok: full-year cost report |
-| 220075 | MASSACHUSETTS EYE AND EAR INFIRMARY - | Voluntary non-profit - Private |  | 1 | 0 | 5,410,251 | 0 | Pneumonia 98%, COPD 2% | ok: full-year cost report |
+| 220011 | CAMBRIDGE HEALTH ALLIANCE | Government - Local |  | 1 | 0 | 13,555,161 | 0 |  | ok: full-year cost report |
+| 220075 | MASSACHUSETTS EYE AND EAR INFIRMARY - | Voluntary non-profit - Private |  | 1 | 0 | 5,410,251 | 0 |  | ok: full-year cost report |
 | 220071 | MASSACHUSETTS GENERAL HOSPITAL | Voluntary non-profit - Private |  | 1 | 0 | 291,933,878 | 0 |  | ok: full-year cost report |
 | 220088 | NEW ENGLAND BAPTIST HOSPITAL | Voluntary non-profit - Private |  | 1 | 0 | 38,205,323 | 0 |  | ok: full-year cost report |
 | 220074 | SOUTHCOAST HOSPITALS GROUP | Voluntary non-profit - Private |  | 1 | 0 | 139,712,861 | 0 |  | ok: full-year cost report |

@@ -1,6 +1,6 @@
 # Data-quality report
 
-_Generated 2026-11-02 17:53 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
+_Generated 2026-11-02 17:56 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
 
 ## Join funnel (cumulative)
 
@@ -38,8 +38,8 @@ _Generated 2026-11-02 17:53 UTC by `python -m models.build` from the files in da
 | cost report has no Medicare base DRG amount | 32 |
 | no county FIPS (name and ZIP both failed) | 27 |
 | no cost report in HCRIS file | 21 |
-| county FIPS found but not in ACS 2024 (e.g. old CT county) | 20 |
 | not in Hospital General Information | 20 |
+| county FIPS found but not in ACS 2024 (e.g. old CT county) | 20 |
 | in IPPS supplemental file but not in HRRP hospital file | 8 |
 
 
@@ -49,12 +49,12 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | condition | rows | err_reported | err_missing | err_na | readmissions_too_few | discharges_missing | footnote_codes_seen |
 |---|---|---|---|---|---|---|---|
-| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 7, 5, 29, 1 |
-| cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 29, 5, 7, 1 |
-| copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 7, 1, 5, 29 |
-| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 1, 5, 29, 7 |
-| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 5, 1, 7, 29 |
-| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 1, 5, 29, 7 |
+| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 1, 29, 5, 7 |
+| cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 1, 5, 7, 29 |
+| copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 5, 29, 1, 7 |
+| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 29, 1, 7, 5 |
+| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 29, 1, 7, 5 |
+| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 7, 1, 5, 29 |
 
 
 ## Text values turned into NULL
@@ -106,7 +106,7 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 |  | 21 |
 
 
-## Assertions (1 failing)
+## Assertions (0 failing)
 
 | test | failing_rows | result |
 |---|---|---|
@@ -122,7 +122,7 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 | Medicare base DRG payments are not negative | 0 | pass |
 | county FIPS is 5 digits | 0 | pass |
 | ACS median income has no Census sentinel codes left | 0 | pass |
-| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS | 624 | FAIL |
+| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS | 0 | pass |
 | condition shares sum to 1 for every penalized hospital | 0 | pass |
 | condition dollars add up to hospital dollars | 0 | pass |
 | no penalty above 3% of the base | 0 | pass |

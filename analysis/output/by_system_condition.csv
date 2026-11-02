@@ -1,31 +1,31 @@
 parent_system,condition,est_penalty_usd
-Community Health Systems,CABG,1212156.0
-Community Health Systems,Pneumonia,962824.0
-Community Health Systems,AMI,882244.0
-Community Health Systems,Heart failure,668665.0
-Community Health Systems,Hip/knee,487148.0
-Community Health Systems,COPD,183186.0
-HCA Healthcare,Pneumonia,8301764.0
-HCA Healthcare,Heart failure,4963303.0
-HCA Healthcare,AMI,4824328.0
-HCA Healthcare,Hip/knee,3830174.0
-HCA Healthcare,CABG,3420221.0
-HCA Healthcare,COPD,798386.0
-Not one of the four chains,Pneumonia,90042694.0
-Not one of the four chains,Heart failure,64791355.0
-Not one of the four chains,AMI,39412192.0
-Not one of the four chains,CABG,34886676.0
-Not one of the four chains,Hip/knee,33660829.0
-Not one of the four chains,COPD,14398921.0
-Tenet Healthcare,Pneumonia,1518932.0
-Tenet Healthcare,Hip/knee,1212038.0
-Tenet Healthcare,AMI,715994.0
-Tenet Healthcare,CABG,661901.0
-Tenet Healthcare,Heart failure,649553.0
-Tenet Healthcare,COPD,112022.0
-Universal Health Services,Pneumonia,1684774.0
-Universal Health Services,Heart failure,648428.0
-Universal Health Services,CABG,254984.0
-Universal Health Services,Hip/knee,205490.0
-Universal Health Services,AMI,137570.0
-Universal Health Services,COPD,73783.0
+Community Health Systems,CABG,1194269.0
+Community Health Systems,Pneumonia,973903.0
+Community Health Systems,AMI,900765.0
+Community Health Systems,Heart failure,674987.0
+Community Health Systems,Hip/knee,466878.0
+Community Health Systems,COPD,185420.0
+HCA Healthcare,Pneumonia,8334795.0
+HCA Healthcare,Heart failure,4998554.0
+HCA Healthcare,AMI,4840951.0
+HCA Healthcare,Hip/knee,3764888.0
+HCA Healthcare,CABG,3398511.0
+HCA Healthcare,COPD,800476.0
+Not one of the four chains,Pneumonia,90585841.0
+Not one of the four chains,Heart failure,65279131.0
+Not one of the four chains,AMI,39538353.0
+Not one of the four chains,CABG,34590855.0
+Not one of the four chains,Hip/knee,32698305.0
+Not one of the four chains,COPD,14500182.0
+Tenet Healthcare,Pneumonia,1554925.0
+Tenet Healthcare,Hip/knee,1188223.0
+Tenet Healthcare,AMI,728532.0
+Tenet Healthcare,Heart failure,653736.0
+Tenet Healthcare,CABG,638109.0
+Tenet Healthcare,COPD,106913.0
+Universal Health Services,Pneumonia,1687116.0
+Universal Health Services,Heart failure,655875.0
+Universal Health Services,CABG,250665.0
+Universal Health Services,Hip/knee,200523.0
+Universal Health Services,AMI,137060.0
+Universal Health Services,COPD,73791.0
