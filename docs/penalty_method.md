@@ -8,7 +8,7 @@ The factor comes straight from CMS. The dollar base is an estimate built from th
 
 ## What is exact (from CMS)
 1. **Payment adjustment factor.** This is CMS's FY2026 number from the IPPS final rule supplemental file, cross-checked against Table 15. It can't be lower than 0.97 (42 CFR 412.154(c)(2)).
-2. **Which conditions drive it.** The regulation (42 CFR 412.152) defines the penalty as the sum over conditions of *DRG payment ratio × (ERR − peer-group median ERR, if positive)*, times a neutrality modifier. CMS publishes every one of those inputs. We split each hospital's dollars across conditions by those exact terms, and `checks/05` re-derives CMS's factor from them. If that assertion passes, the split is CMS's own arithmetic, not an assumption.
+2. **Which conditions drive it.** The regulation (42 CFR 412.152) defines the penalty as the sum over conditions of *DRG payment ratio × (ERR − peer-group median ERR, if positive)*, times a neutrality modifier. CMS publishes every one of those inputs. A condition counts only when CMS's per-condition penalty indicator is "Y". We split each hospital's dollars across conditions by those exact terms, and `checks/05` re-derives CMS's factor from them. If that assertion passes, the split is CMS's own arithmetic, not an assumption.
 
 ## Assumptions in the dollar base (each one is a source of error)
 | # | Assumption | Direction of error |

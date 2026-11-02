@@ -9,6 +9,19 @@ FROM stg.hrrp_supplemental s
 JOIN mart.hospital_paf_recomputed r USING (ccn)
 WHERE abs(s.payment_adjustment_factor - r.paf_recomputed) > 0.0001;
 
+-- Diagnostics shown in the penalty report
+CREATE OR REPLACE TABLE qa.paf_recompute_summary AS
+SELECT count(*)                                  AS hospitals_compared,
+       count(*) FILTER (WHERE abs(s.payment_adjustment_factor - r.paf_recomputed) > 0.0001) AS mismatches,
+       round(max(abs(s.payment_adjustment_factor - r.paf_recomputed)), 5)                    AS max_abs_diff,
+       round(median(abs(s.payment_adjustment_factor - r.paf_recomputed)), 6)                 AS median_abs_diff
+FROM stg.hrrp_supplemental s JOIN mart.hospital_paf_recomputed r USING (ccn);
+
+CREATE OR REPLACE TABLE qa.penalty_indicator_values AS
+SELECT condition, penalty_indicator, count(*) AS n,
+       count(*) FILTER (WHERE err > peer_median_err) AS n_err_above_median
+FROM mart.hospital_condition_penalty_share GROUP BY ALL ORDER BY 1, 2;
+
 INSERT INTO qa.assertions
 SELECT 'recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS',
        (SELECT count(*) FROM qa.paf_recompute_mismatches)

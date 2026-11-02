@@ -9,36 +9,49 @@
 --    42 CFR 412.152: excess payments = sum over conditions of
 --    (DRG payment ratio) x (ERR - peer-group median ERR, if positive), times the
 --    neutrality modifier. The factor is 1 minus that, floored at 0.97.
+--    A condition only counts when CMS's penalty indicator for it is "Y" (CMS sets it
+--    to "N" when, e.g., the hospital has too few eligible cases for that condition).
 CREATE OR REPLACE TABLE mart.hospital_condition_penalty_share AS
 WITH long AS (
     SELECT ccn, 'ami' AS condition, 'AMI' AS condition_label, drg_payment_ratio_ami AS drg_payment_ratio,
-           err_ami AS err, peer_median_err_ami AS peer_median_err, eligible_discharges_ami AS eligible_discharges
+           err_ami AS err, peer_median_err_ami AS peer_median_err, eligible_discharges_ami AS eligible_discharges,
+           penalty_indicator_ami AS penalty_indicator
     FROM stg.hrrp_supplemental
     UNION ALL
     SELECT ccn, 'hf' AS condition, 'Heart failure' AS condition_label, drg_payment_ratio_hf AS drg_payment_ratio,
-           err_hf AS err, peer_median_err_hf AS peer_median_err, eligible_discharges_hf AS eligible_discharges
+           err_hf AS err, peer_median_err_hf AS peer_median_err, eligible_discharges_hf AS eligible_discharges,
+           penalty_indicator_hf AS penalty_indicator
     FROM stg.hrrp_supplemental
     UNION ALL
     SELECT ccn, 'pn' AS condition, 'Pneumonia' AS condition_label, drg_payment_ratio_pn AS drg_payment_ratio,
-           err_pn AS err, peer_median_err_pn AS peer_median_err, eligible_discharges_pn AS eligible_discharges
+           err_pn AS err, peer_median_err_pn AS peer_median_err, eligible_discharges_pn AS eligible_discharges,
+           penalty_indicator_pn AS penalty_indicator
     FROM stg.hrrp_supplemental
     UNION ALL
     SELECT ccn, 'copd' AS condition, 'COPD' AS condition_label, drg_payment_ratio_copd AS drg_payment_ratio,
-           err_copd AS err, peer_median_err_copd AS peer_median_err, eligible_discharges_copd AS eligible_discharges
+           err_copd AS err, peer_median_err_copd AS peer_median_err, eligible_discharges_copd AS eligible_discharges,
+           penalty_indicator_copd AS penalty_indicator
     FROM stg.hrrp_supplemental
     UNION ALL
     SELECT ccn, 'cabg' AS condition, 'CABG' AS condition_label, drg_payment_ratio_cabg AS drg_payment_ratio,
-           err_cabg AS err, peer_median_err_cabg AS peer_median_err, eligible_discharges_cabg AS eligible_discharges
+           err_cabg AS err, peer_median_err_cabg AS peer_median_err, eligible_discharges_cabg AS eligible_discharges,
+           penalty_indicator_cabg AS penalty_indicator
     FROM stg.hrrp_supplemental
     UNION ALL
     SELECT ccn, 'tha_tka' AS condition, 'Hip/knee' AS condition_label, drg_payment_ratio_tha_tka AS drg_payment_ratio,
-           err_tha_tka AS err, peer_median_err_tha_tka AS peer_median_err, eligible_discharges_tha_tka AS eligible_discharges
+           err_tha_tka AS err, peer_median_err_tha_tka AS peer_median_err, eligible_discharges_tha_tka AS eligible_discharges,
+           penalty_indicator_tha_tka AS penalty_indicator
     FROM stg.hrrp_supplemental
 )
 SELECT
     l.*,
     s.neutrality_modifier,
-    coalesce(greatest(l.err - l.peer_median_err, 0), 0) * coalesce(l.drg_payment_ratio, 0) AS excess_term,
+    CASE WHEN upper(trim(l.penalty_indicator)) IN ('N', 'NO', '0', 'FALSE') THEN false
+         WHEN upper(trim(l.penalty_indicator)) IN ('Y', 'YES', '1', 'TRUE') THEN true
+         ELSE NULL END                                                                      AS counts_for_penalty,
+    CASE WHEN counts_for_penalty IS false THEN 0
+         ELSE coalesce(greatest(l.err - l.peer_median_err, 0), 0) * coalesce(l.drg_payment_ratio, 0)
+    END                                                                                     AS excess_term,
     excess_term / nullif(sum(excess_term) OVER (PARTITION BY l.ccn), 0)                   AS share_of_penalty
 FROM long l
 JOIN stg.hrrp_supplemental s USING (ccn);
@@ -88,6 +101,7 @@ FROM base;
 CREATE OR REPLACE TABLE mart.hospital_condition_penalty AS
 SELECT s.ccn, s.condition, s.condition_label, s.err, s.peer_median_err, s.drg_payment_ratio,
        s.share_of_penalty,
+       s.counts_for_penalty,
        p.est_penalty_usd * s.share_of_penalty AS condition_penalty_usd
 FROM mart.hospital_condition_penalty_share s
 JOIN mart.hospital_penalty p USING (ccn);
@@ -102,7 +116,8 @@ SELECT p.*,
     sum(condition_penalty_usd) FILTER (WHERE condition = 'cabg') AS penalty_usd_cabg,
     sum(condition_penalty_usd) FILTER (WHERE condition = 'tha_tka') AS penalty_usd_tha_tka,
     string_agg(condition_label || ' ' || round(100 * share_of_penalty)::INT || '%', ', '
-               ORDER BY share_of_penalty DESC) FILTER (WHERE share_of_penalty > 0) AS penalty_drivers
+               ORDER BY share_of_penalty DESC)
+        FILTER (WHERE p.is_penalized AND share_of_penalty >= 0.005)          AS penalty_drivers
 FROM mart.hospital_penalty p
 LEFT JOIN mart.hospital_condition_penalty c USING (ccn)
 GROUP BY ALL;

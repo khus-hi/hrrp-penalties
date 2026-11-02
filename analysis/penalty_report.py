@@ -21,23 +21,29 @@ OUT = C.ROOT / "analysis" / "output"
 RULE_DIR = C.RAW / "ipps_fy2026_final_rule_text"
 
 
-def cms_rule_passages(limit=40):
-    """Sentences from the FY2026 final rule that mention HRRP and a $ figure or hospital count."""
-    files = sorted(RULE_DIR.glob("*.htm*"))
+def cms_rule_passages(window=700, limit=30):
+    """Text around every mention of the HRRP in the FY2026 final rule that also contains
+    a dollar amount or a hospital count. Returns (diagnostics, passages)."""
+    files = sorted(p for p in RULE_DIR.glob("*") if p.is_file())
     if not files:
-        return None
-    text = html.unescape(re.sub(r"<[^>]+>", " ", files[0].read_text(errors="ignore")))
-    text = re.sub(r"\s+", " ", text)
-    sentences = re.split(r"(?<=[.;])\s+(?=[A-Z(])", text)
-    topic = re.compile(r"readmission", re.I)
-    figure = re.compile(r"\$\s?[\d.,]+\s*(million|billion)|[\d.,]+\s+(million|billion)\b|"
-                        r"\b[\d,]{3,}\s+hospitals\b|percent of (eligible |applicable )?hospitals", re.I)
-    hits, seen = [], set()
-    for s in sentences:
-        if topic.search(s) and figure.search(s) and len(s) < 1200 and s not in seen:
-            seen.add(s)
-            hits.append(s.strip())
-    return hits[:limit]
+        return None, None
+    raw = files[0].read_text(errors="ignore")
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", raw)))
+    mentions = [m.start() for m in re.finditer(r"Readmissions? Reduction Program|HRRP", text)]
+    figure = re.compile(r"\$\s?[\d.,]+\s*(million|billion)|\b[\d.,]+\s+(million|billion)\b|"
+                        r"\b\d{1,2},\d{3}\s+hospitals\b|\b\d{3,4}\s+hospitals\b", re.I)
+    passages, last_end = [], -1
+    for pos in mentions:
+        start, end = max(0, pos - window // 3), min(len(text), pos + window)
+        if start < last_end:  # skip overlapping windows
+            continue
+        chunk = text[start:end]
+        if figure.search(chunk):
+            passages.append("..." + chunk.strip() + "...")
+            last_end = end
+    diag = {"file": files[0].name, "characters": len(text), "hrrp_mentions": len(mentions),
+            "passages_with_figures": len(passages)}
+    return diag, passages[:limit]
 
 
 def main():
@@ -50,9 +56,13 @@ def main():
         con.execute(f"COPY analysis.{t} TO '{OUT / (t + '.csv')}' (HEADER)")
     con.execute(f"COPY mart.hospital_penalty_wide TO '{OUT / 'hospital_penalty.csv'}' (HEADER)")
 
-    passages = cms_rule_passages()
-    cms_block = ("_Final rule text not downloaded; run `python -m ingest.download`._" if passages is None
-                 else "\n".join(f"> {p}\n" for p in passages) or "_No matching sentences found._")
+    diag, passages = cms_rule_passages()
+    if diag is None:
+        cms_block = "_Final rule text not downloaded; run `python -m ingest.download`._"
+    else:
+        cms_block = (f"_Searched {diag['file']}: {diag['characters']:,} characters, "
+                     f"{diag['hrrp_mentions']} HRRP mentions, {diag['passages_with_figures']} with a $ or hospital count._\n\n"
+                     + ("\n".join(f"> {p}\n" for p in passages) or "_No matching passages found._"))
 
     failed = con.execute("SELECT count(*) FROM qa.assertions WHERE failing_rows > 0").fetchone()[0]
     parts = [
@@ -64,8 +74,10 @@ def main():
         "## Check against CMS",
         "### Counts in CMS's own FY2026 supplemental file", md_table(con, "SELECT * FROM analysis.cms_file_counts"),
         "### Does the formula reproduce CMS's factor?",
-        md_table(con, "SELECT test, failing_rows FROM qa.assertions WHERE test LIKE 'recomputed factor%'"),
-        "### What the FY2026 final rule says (verbatim sentences mentioning readmissions with a $ amount or hospital count)",
+        md_table(con, "SELECT * FROM qa.paf_recompute_summary"),
+        "CMS penalty indicator values by condition:",
+        md_table(con, "SELECT * FROM qa.penalty_indicator_values"),
+        "### What the FY2026 final rule says (verbatim text around HRRP mentions that include a $ amount or hospital count)",
         cms_block,
         "## By condition", md_table(con, "SELECT * FROM analysis.by_condition"),
         "## By parent system", md_table(con, "SELECT * FROM analysis.by_system"),
