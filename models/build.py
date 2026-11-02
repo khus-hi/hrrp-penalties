@@ -71,6 +71,13 @@ def main(db_path=C.DB_PATH):
     if not Path(db_path).exists():
         sys.exit(f"{db_path} not found. Run python -m ingest.load first.")
     con = duckdb.connect(str(db_path))
+    have = {r[0] for r in con.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'raw'").fetchall()}
+    need = {"hrrp_hospital", "hospital_general_info", "hrrp_supplemental", "hrrp_table15",
+            "hospital_cost_report", "hospital_enrollments", "hospital_all_owners",
+            "zcta_county_rel", "sec_facts", "acs_county"}
+    if need - have:
+        sys.exit(f"Missing raw tables: {sorted(need - have)}. Fix the download/load errors first.")
     print("Building models:")
     run_sql(con, C.ROOT)
     failed = write_report(con)

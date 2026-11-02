@@ -24,7 +24,11 @@ from ingest import config as C
 load_dotenv(C.ROOT / ".env")
 MANIFEST = C.RAW / "manifest.json"
 SESSION = requests.Session()
-SESSION.headers["User-Agent"] = "hrrp-penalties portfolio project (python-requests)"
+# Identify the script honestly with a contact address, the convention SEC requires and
+# other public data sites prefer. If a site still refuses (403), main() tells you which
+# file to download by hand in your browser instead.
+_contact = os.getenv("SEC_USER_AGENT", "").strip()
+SESSION.headers["User-Agent"] = f"hrrp-penalties research script ({_contact or 'no contact set'})"
 
 
 def _log(entry: dict) -> None:
@@ -49,7 +53,8 @@ def _get(url, **kw):
             r.raise_for_status()
             return r
         except requests.RequestException as e:
-            if attempt == 3:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if attempt == 3 or status in (401, 403, 404):  # retrying won't fix these
                 raise
             wait = 2 ** (attempt + 1)
             print(f"  retry in {wait}s after: {e}")
@@ -62,6 +67,9 @@ def fetch_file(name, url, force=False, extract=False):
     path = out_dir / url.rsplit("/", 1)[-1]
     if path.exists() and not force:
         print(f"[skip] {name}: {path.name} already downloaded")
+        if extract and zipfile.is_zipfile(path):  # e.g. a zip you saved by hand
+            with zipfile.ZipFile(path) as z:
+                z.extractall(out_dir)
         return path
     print(f"[get ] {name}: {url}")
     with _get(url, stream=True) as r, open(path, "wb") as f:
@@ -79,7 +87,11 @@ def fetch_file(name, url, force=False, extract=False):
 
 def provider_data_url(metastore_id, fallback):
     """Ask the CMS metastore for the current CSV link (it changes on each refresh)."""
-    meta = _get(f"https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/{metastore_id}").json()
+    try:
+        meta = _get(f"https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/{metastore_id}").json()
+    except requests.RequestException as e:
+        print(f"  metastore lookup failed ({e}); using the link verified on 2026-11-01")
+        return fallback
     urls = [d.get("downloadURL") for d in meta.get("distribution", []) if d.get("downloadURL")]
     if not urls:
         print(f"  metastore gave no downloadURL for {metastore_id}; using fallback")
@@ -161,13 +173,36 @@ def main():
     args = ap.parse_args()
     C.RAW.mkdir(parents=True, exist_ok=True)
 
+    # Each source is tried on its own, so one refused site doesn't stop the rest.
+    failures = []
+
+    def attempt(label, fn, manual_url=None, folder=None):
+        try:
+            fn()
+        except (requests.RequestException, OSError, ValueError) as e:
+            print(f"[FAIL] {label}: {e}")
+            failures.append((label, manual_url, folder))
+
     for name, spec in C.FILES.items():
-        url = spec.get("url") or provider_data_url(spec["metastore_id"], spec["fallback_url"])
-        fetch_file(name, url, force=args.force, extract=url.lower().endswith(".zip"))
+        url = spec.get("url") or spec["fallback_url"]
+        attempt(name,
+                lambda n=name, s=spec, u=url: fetch_file(
+                    n, s.get("url") or provider_data_url(s["metastore_id"], s["fallback_url"]),
+                    force=args.force, extract=u.lower().endswith(".zip")),
+                manual_url=url, folder=C.RAW / name)
     for name, uuid in C.CMS_API_DATASETS.items():
-        fetch_cms_api(name, uuid, force=args.force)
-    fetch_sec(force=args.force)
-    fetch_acs(force=args.force)
+        attempt(name, lambda n=name, u=uuid: fetch_cms_api(n, u, force=args.force))
+    attempt("SEC companyfacts", lambda: fetch_sec(force=args.force))
+    attempt("Census ACS", lambda: fetch_acs(force=args.force))
+
+    if failures:
+        print(f"\n{len(failures)} source(s) failed:")
+        for label, url, folder in failures:
+            print(f"  - {label}")
+            if url:
+                print(f"      manual fix: open {url} in your browser, save the file into "
+                      f"{folder.relative_to(C.ROOT)}/ , then re-run this script")
+        sys.exit(1)  # non-zero exit so "download && load && build" stops here
     print(f"\nDone. Manifest: {MANIFEST.relative_to(C.ROOT)}")
 
 
