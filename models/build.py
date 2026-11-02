@@ -32,7 +32,8 @@ def md_table(con, sql: str) -> str:
     rows = cur.fetchall()
     if not rows:
         return "_(no rows)_\n"
-    fmt = lambda v: "" if v is None else (f"{v:,}" if isinstance(v, int) else str(v))
+    # Thousands separators for counts, but not for years like 2024.
+    fmt = lambda v: "" if v is None else (f"{v:,}" if isinstance(v, int) and abs(v) >= 10000 else str(v))
     lines = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
     lines += ["| " + " | ".join(fmt(v) for v in r) + " |" for r in rows]
     return "\n".join(lines) + "\n"
