@@ -13,4 +13,5 @@ python -m analysis.penalty_report   # penalty estimate -> docs/penalty_report.md
 python -m analysis.err_model        # what explains ERR -> docs/err_model_report.md + docs/figures/
 python -m analysis.build_workbook   # Excel: chain penalties vs SEC financials, scenarios, ROI (docs/workbook_guide.md)
 python -m dashboard.export_tableau   # CSVs for the Tableau Public dashboard (docs/tableau_build_guide.md)
+python -m analysis.open_checks        # chain counts vs 10-Ks, hospitals with no CMS factor (docs/open_checks_report.md)
 ```
