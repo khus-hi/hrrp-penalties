@@ -90,14 +90,22 @@ def find_header_row(raw: pd.DataFrame) -> int | None:
 
 
 def read_tables(folder: Path):
-    """Yield (sheet_label, DataFrame) for every CSV/XLSX table found in a folder."""
-    for p in sorted(folder.rglob("*")):
-        ext = p.suffix.lower()
-        if ext in (".xlsx", ".xls"):
+    """Yield (sheet_label, DataFrame) for the data tables in a folder.
+
+    CMS zips mix the data spreadsheet with .txt copies and "Variable Description"
+    notes. Prefer the spreadsheet; only fall back to delimited text when there is none.
+    """
+    files = sorted(p for p in folder.rglob("*") if p.is_file())
+    sheets = [p for p in files if p.suffix.lower() in (".xlsx", ".xls")]
+    if sheets:
+        for p in sheets:
             for sheet, raw in pd.read_excel(p, sheet_name=None, header=None, dtype=str).items():
                 yield f"{p.name}:{sheet}", raw
-        elif ext in (".csv", ".txt"):
-            yield p.name, read_csv_text(p, header=None)
+        return
+    for p in files:
+        if p.suffix.lower() in (".csv", ".txt") and "description" not in p.name.lower():
+            sep = "\t" if "\t" in p.read_text(errors="ignore")[:2000] else ","
+            yield p.name, read_csv_text(p, header=None, sep=sep, on_bad_lines="skip")
 
 
 def match(cols, include, exclude):
