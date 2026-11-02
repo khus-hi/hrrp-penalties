@@ -33,5 +33,13 @@ python -m models.build     ->  stg.* -> int.* -> mart.hospital, qa.*  + docs/dat
 - `mart.hospital_penalty`: (1 − factor) × annualised Medicare base DRG payments, with an `estimate_quality` flag on each row. `mart.hospital_condition_penalty` splits the dollars by condition using CMS's own inputs. The method is in [penalty_method.md](penalty_method.md).
 - `python -m analysis.penalty_report` writes the state, ownership, system, condition and Massachusetts tables to `docs/penalty_report.md` and `analysis/output/*.csv`. It also quotes the FY2026 final rule's own HRRP estimates for comparison.
 
+## 6. What explains readmission ratios (`analysis/err_model.py`)
+- **Outcome:** each hospital's composite ERR, weighted by CMS's eligible discharges.
+- **Main model:** OLS with HC3 robust standard errors on beds, teaching status, ownership, dual-eligible share, county income and county 65+ share. Star rating is added separately because it partly contains the outcome.
+- **Sensitivity checks:** errors clustered by state, a discharge-weighted fit, and DSH % in place of the dual share.
+- **Variance explained:** a Shapley split of R² shows how much social risk accounts for.
+- **Nonlinearity:** a cross-validated gradient-boosted tree, compared with the linear model.
+- **Output:** `docs/err_model_report.md`, which includes plain-English coefficients, the assumption checks and the causality caveats.
+
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.

@@ -20,6 +20,7 @@ SELECT
     to_num(outlier_payments_for_discharges)                   AS outlier_payments,
     to_num(disproportionate_share_adjustment)                 AS dsh_payments,
     to_num(total_ime_payment)                                 AS ime_payments,
+    to_num(allowable_dsh_percentage)                          AS dsh_pct,           -- Medicare DSH patient percentage
     to_num(net_patient_revenue)                               AS net_patient_revenue,
     to_num(total_patient_revenue)                             AS total_patient_revenue,
     to_num(net_income)                                        AS net_income

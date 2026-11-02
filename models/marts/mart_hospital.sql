@@ -51,6 +51,7 @@ SELECT
     cr.cr_fy_begin, cr.cr_fy_end,
     cr.medicare_discharges,
     cr.net_patient_revenue,
+    cr.dsh_pct,
 
     -- Attributes
     gi.hospital_type,
