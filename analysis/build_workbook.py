@@ -30,7 +30,9 @@ TAGS = {
     "pretax_income": ["IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
                       "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"],
     "interest_expense": ["InterestExpense", "InterestExpenseNonoperating", "InterestExpenseDebt"],
-    "net_income": ["NetIncomeLoss"],
+    # NetIncomeLoss is attributable to the company. Some filers tag only the common-
+    # shareholder or consolidated (incl. noncontrolling interests) version.
+    "net_income": ["NetIncomeLoss", "NetIncomeLossAvailableToCommonStockholdersBasic", "ProfitLoss"],
 }
 
 INPUT_FILL = PatternFill("solid", fgColor="FFF2CC")
@@ -228,7 +230,7 @@ def build(hosp, cond, sec):
     sf = wb.create_sheet("SEC_Financials")
     cols = ["Company", "CIK", "Fiscal year", "Revenue", "Revenue tag", "Operating income (reported)",
             "Operating income tag", "Pre-tax income", "Pre-tax tag", "Interest expense", "Interest tag",
-            "Operating income used", "Basis", "Net income (attrib. to company)", "Net income tag", "Last 10-K filed"]
+            "Operating income used", "Basis", "Net income", "Net income tag (ProfitLoss = includes noncontrolling interests)", "Last 10-K filed"]
     header(sf, 1, cols, [26, 9, 8, 16, 34, 16, 22, 16, 30, 14, 22, 16, 30, 16, 16, 12])
     for i, r in enumerate(sec.itertuples(index=False), start=2):
         vals = [r.company, r.cik, r.fy, blank(r.revenue), r.revenue_tag, blank(r.operating_income),
@@ -260,7 +262,8 @@ def build(hosp, cond, sec):
         put(cs, f"D{i}", f"=SUMIFS({H('I')},{H('A')},A{i})", USD)
         put(cs, f"E{i}", f'=IF(COUNTIFS({F("A")},A{i})=0,"",_xlfn.MAXIFS({F("C")},{F("A")},A{i}))', "0")
         for col, src in zip("FGH", "DLN"):
-            put(cs, f"{col}{i}", f'=IFERROR(INDEX({F(src)},MATCH(1,INDEX(({F("A")}=A{i})*({F("C")}=E{i}),0),0)),"")', USDM)
+            look = f'INDEX({F(src)},MATCH(1,INDEX(({F("A")}=A{i})*({F("C")}=E{i}),0),0))'
+            put(cs, f"{col}{i}", f'=IFERROR(IF({look}="","",{look}),"")', USDM)
         put(cs, f"I{i}", f'=IF(ISNUMBER(G{i}),D{i}/G{i},"")', PCT3)
         put(cs, f"J{i}", f'=IF(ISNUMBER(F{i}),D{i}/F{i},"")', PCT3)
         put(cs, f"K{i}", f'=IF(ISNUMBER(H{i}),D{i}/H{i},"")', PCT3)
@@ -281,7 +284,8 @@ def build(hosp, cond, sec):
         i = r0 + k
         put(cs, f"A{i}", rr.company); put(cs, f"B{i}", rr.fy, "0")
         for col, src in zip("CDE", "DLN"):
-            put(cs, f"{col}{i}", f'=IFERROR(INDEX({F(src)},MATCH(1,INDEX(({F("A")}=A{i})*({F("C")}=B{i}),0),0)),"")', USDM)
+            look = f'INDEX({F(src)},MATCH(1,INDEX(({F("A")}=A{i})*({F("C")}=B{i}),0),0))'
+            put(cs, f"{col}{i}", f'=IFERROR(IF({look}="","",{look}),"")', USDM)
         put(cs, f"F{i}", f'=IF(AND(ISNUMBER(C{i}),ISNUMBER(D{i})),D{i}/C{i},"")', PCT)
         put(cs, f"G{i}", f'=IF(ISNUMBER(D{i}),SUMIFS({H("I")},{H("A")},A{i})/D{i},"")', PCT3)
 

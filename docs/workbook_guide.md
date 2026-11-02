@@ -56,7 +56,8 @@ Scenarios use the **recomputed** baseline (P), so savings compare like with like
 Values come straight from SEC companyfacts: the latest-filed 10-K value for each fiscal year, with the XBRL tag recorded next to each number.
 - **Operating income used (L):** `=IF(ISNUMBER(F), F, IF(AND(ISNUMBER(H), ISNUMBER(J)), H + J, ""))`
   "If the company reports operating income, use it. If not, use EBIT: pre-tax income plus interest expense. EBIT is the standard stand-in for operating income, and column M says which basis was used."
-- **Net income** is `NetIncomeLoss`, which is attributable to the company and excludes noncontrolling interests. That matters for HCA, which has large joint-venture partners.
+- **Net income** uses `NetIncomeLoss` (attributable to the company, excluding noncontrolling interests) where the company tags it. Otherwise it uses the common-shareholder version, and failing that `ProfitLoss`, which **includes** noncontrolling interests. Column O shows which was used. The difference matters for HCA and Tenet, which have large joint-venture partners.
+- **Read one-off years carefully:** a year with large gains on hospital or business sales (Tenet's 2024 operating income stands out in the history) makes the penalty look smaller relative to income than it usually is. Check the 10-K before quoting that year.
 
 ## Chain_Summary
 | Column | Formula | Meaning |
