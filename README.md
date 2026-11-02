@@ -9,4 +9,5 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env        # add SEC_USER_AGENT and CENSUS_API_KEY (both required, both free)
 python -m ingest.download && python -m ingest.load && python -m models.build   # each step stops the chain if it fails
+python -m analysis.penalty_report   # penalty estimate -> docs/penalty_report.md + analysis/output/*.csv
 ```

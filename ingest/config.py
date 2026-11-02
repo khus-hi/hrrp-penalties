@@ -42,6 +42,12 @@ FILES = {
         "url": "https://www.cms.gov/files/zip/fy2026-ipps-fr-impact-file.zip",
         "verified": "link on FY2026 IPPS final rule page; downloaded for reference, not modelled yet",
     },
+    # Full text of the FY2026 IPPS final rule (Federal Register 2025-14681), linked from
+    # the CMS FY2026 IPPS final rule page. Used only to quote CMS's own HRRP estimates.
+    "ipps_fy2026_final_rule_text": {
+        "url": "https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm",
+        "verified": "link on CMS FY2026 IPPS final rule page; page opened 2026-11-01",
+    },
     # Census 2020 ZCTA -> county relationship file (pipe-delimited). Used only as a
     # fallback when a hospital's county name doesn't match ACS.
     "zcta_county_rel": {

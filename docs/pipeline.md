@@ -29,6 +29,9 @@ python -m models.build     ->  stg.* -> int.* -> mart.hospital, qa.*  + docs/dat
 - `qa.suppressed_values`: per condition, how many ERRs are missing, "N/A", or "Too Few to Report", and which footnote codes appear.
 - `qa.assertions`: pass/fail tests. Examples: one row per CCN; adjustment factor within [0.97, 1.0], the floor in 42 CFR 412.154; supplemental factor matches Table 15; no Census sentinel codes left.
 
+## 5. Penalty estimate (`models/marts/mart_hospital_penalty.sql`, `analysis/`)
+- `mart.hospital_penalty`: (1 − factor) × annualised Medicare base DRG payments, with an `estimate_quality` flag on each row. `mart.hospital_condition_penalty` splits the dollars by condition using CMS's own inputs. The method is in [penalty_method.md](penalty_method.md).
+- `python -m analysis.penalty_report` writes the state, ownership, system, condition and Massachusetts tables to `docs/penalty_report.md` and `analysis/output/*.csv`. It also quotes the FY2026 final rule's own HRRP estimates for comparison.
+
 ## Not done yet (on purpose)
-- Penalty dollars, i.e. (1 − factor) × base DRG payments. The inputs are in the mart, but the estimate is the next step so its caveats get their own write-up.
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
