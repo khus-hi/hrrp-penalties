@@ -12,6 +12,7 @@ authors = [{ name = "Khushi" }]
 # Lower bounds only: the versions the pipeline was built and run with, or newer.
 dependencies = [
     "duckdb>=1.1",
+    "dbt-duckdb>=1.9",
     "requests>=2.31",
     "numpy>=1.26",
     "pandas>=2.1",

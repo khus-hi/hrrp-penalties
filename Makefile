@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build analysis workbook tableau test lint all
+.PHONY: help install ingest build docs analysis workbook tableau test lint all
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -15,8 +15,11 @@ ingest:  ## Download every source into data/raw and load it into DuckDB (needs .
 	$(PYTHON) -m ingest.download
 	$(PYTHON) -m ingest.load
 
-build:  ## Run the SQL models and data-quality checks (docs/data_quality_report.md)
+build:  ## dbt build: seeds, models and tests, then docs/data_quality_report.md
 	$(PYTHON) -m models.build
+
+docs:  ## Generate the dbt docs site (lineage graph, column descriptions) and serve it on localhost:8080
+	cd dbt && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs generate && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs serve
 
 analysis:  ## Penalty report, ERR model, open checks, and the Python-vs-SQL-vs-CMS factor check
 	$(PYTHON) -m analysis.penalty_report
