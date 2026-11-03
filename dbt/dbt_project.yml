@@ -1,0 +1,52 @@
+# dbt project for the HRRP penalty pipeline.
+# Layers: raw (loaded by ingest/load.py) -> stg -> int -> mart, plus qa report tables.
+# Run from the repo root with `make build`, or from this folder with `dbt build`.
+name: hrrp
+version: "1.0.0"
+config-version: 2
+profile: hrrp
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+# The seed CSVs stay in the repo-root seeds/ folder, where they were before dbt.
+seed-paths: ["../seeds"]
+target-path: target
+clean-targets: ["target", "dbt_packages", "logs"]
+
+# Every model is a plain table, the same as the CREATE OR REPLACE TABLE statements
+# this replaced. The schema names (stg, int, mart, qa, seed) and table names
+# (mart.hospital, not mart.mart_hospital) are kept exactly, so analysis/ and
+# dashboard/ read the same tables as before. See macros/naming.sql.
+models:
+  hrrp:
+    +materialized: table
+    staging:
+      +schema: stg
+    intermediate:
+      +schema: int
+    marts:
+      +schema: mart
+    qa:
+      +schema: qa
+
+seeds:
+  hrrp:
+    +schema: seed
+    # Load every seed column as text, as ingest/load.py used to. Without this dbt
+    # would read state FIPS "01" as the number 1 and the county joins would break.
+    state_fips:
+      +column_types: {state_abbr: varchar, state_fips: varchar}
+    system_owner_patterns:
+      +column_types: {system: varchar, cik: varchar, owner_name_pattern: varchar, note: varchar}
+
+data_tests:
+  hrrp:
+    # The old checks reported failures without stopping the build. Most tests keep
+    # that behaviour (warn). The few that guard the grain of the mart or the CMS
+    # formula are set to error in their own config, so dbt skips everything
+    # downstream of a broken table instead of computing dollars from it.
+    +severity: warn
+    # Keep the failing rows of every test in qa_failures.<test name> for debugging.
+    +store_failures: true
+    +schema: qa_failures

@@ -1,0 +1,372 @@
+version: 2
+
+models:
+  - name: mart_hospital
+    description: >
+      ONE ROW PER HOSPITAL in the CMS FY2026 HRRP file (built as mart.hospital). Every other
+      source is LEFT JOINed onto that spine so no hospital silently disappears; qa.join_funnel
+      reports how many have each piece.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique:
+              config: {severity: error}
+          - not_null:
+              config: {severity: error}
+          - relationships:
+              arguments:
+                to: ref('stg_hrrp_measures')
+                field: ccn
+      - name: facility_name
+        description: "Hospital name (General Information, else the HRRP file)."
+      - name: state
+        description: "Two-letter state from the HRRP file."
+      - name: hrrp_period_start
+        description: "Start of the HRRP performance period."
+      - name: hrrp_period_end
+        description: "End of the HRRP performance period."
+      - name: err_ami
+        description: "ERR for AMI from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: err_hf
+        description: "ERR for heart failure from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: err_pn
+        description: "ERR for pneumonia from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: err_copd
+        description: "ERR for COPD from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: err_cabg
+        description: "ERR for CABG from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: err_tha_tka
+        description: "ERR for hip/knee replacement from the HRRP hospital file (NULL = suppressed or not reported)."
+      - name: discharges_ami
+        description: "Eligible AMI discharges from the HRRP hospital file."
+      - name: discharges_hf
+        description: "Eligible heart failure discharges from the HRRP hospital file."
+      - name: discharges_pn
+        description: "Eligible pneumonia discharges from the HRRP hospital file."
+      - name: discharges_copd
+        description: "Eligible COPD discharges from the HRRP hospital file."
+      - name: discharges_cabg
+        description: "Eligible CABG discharges from the HRRP hospital file."
+      - name: discharges_tha_tka
+        description: "Eligible hip/knee replacement discharges from the HRRP hospital file."
+      - name: n_conditions_with_err
+        description: "How many of the six conditions have a reported ERR."
+      - name: payment_adjustment_factor
+        description: "{{ doc('payment_adjustment_factor') }}"
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "between 0.97 and 1.0"
+      - name: payment_adjustment_factor_table15
+        description: "The same factor from IPPS Table 15 (cross-check)."
+      - name: dual_proportion
+        description: "Dual-eligible share of Medicare stays (CMS)."
+      - name: peer_group
+        description: "CMS dual-proportion peer group, 1-5."
+      - name: medicare_base_drg_payments
+        description: "Medicare FFS base DRG payments from the latest cost report (the base the penalty applies to)."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: medicare_base_drg_source
+        description: "Cost report line(s) the base came from."
+      - name: cr_fy_begin
+        description: "Cost report fiscal year start."
+      - name: cr_fy_end
+        description: "Cost report fiscal year end (NULL = no cost report)."
+      - name: medicare_discharges
+        description: "Medicare discharges on the cost report."
+      - name: net_patient_revenue
+        description: "Net patient revenue on the cost report."
+      - name: dsh_pct
+        description: "Medicare DSH patient percentage."
+      - name: hospital_type
+        description: "CMS hospital type (NULL = not in General Information)."
+      - name: hospital_ownership
+        description: "CMS ownership category from General Information."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - "Voluntary non-profit - Private"
+                  - "Voluntary non-profit - Church"
+                  - "Voluntary non-profit - Other"
+                  - "Proprietary"
+                  - "Government - Hospital District or Authority"
+                  - "Government - Local"
+                  - "Government - State"
+                  - "Government - Federal"
+                  - "Physician"
+                  - "Tribal"
+      - name: cr_type_of_control
+        description: "Type of control code from the cost report."
+      - name: beds
+        description: "Beds on the cost report."
+      - name: intern_resident_fte
+        description: "Intern and resident FTEs (blank = none)."
+      - name: is_teaching
+        description: "True when the cost report shows intern/resident FTEs above 0. NULL only when there is no cost report."
+      - name: star_rating
+        description: "CMS overall star rating 1-5."
+      - name: has_emergency_services
+        description: "Emergency services reported."
+      - name: county_fips
+        description: "5-digit county FIPS (from int_hospital_county)."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "similar to '[0-9]{5}'"
+          - relationships:
+              arguments:
+                to: ref('stg_acs_county')
+                field: county_fips
+              config:
+                where: "county_match_method = 'county name'"
+      - name: county_match_method
+        description: "'county name' or 'zip fallback'."
+      - name: county_acs_name
+        description: "ACS name of the county (NULL = FIPS not in ACS 2024, e.g. an old Connecticut county)."
+      - name: county_median_household_income
+        description: "County median household income, ACS 2020-2024."
+      - name: county_median_age
+        description: "County median age, ACS 2020-2024."
+      - name: county_share_age_65_plus
+        description: "County share aged 65+, ACS 2020-2024."
+      - name: parent_system
+        description: "One of the four public chains, or NULL."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('system_owner_patterns')
+                field: system
+      - name: parent_cik
+        description: "SEC CIK of the parent system."
+      - name: parent_max_pct_ownership
+        description: "Largest stake held by a matching owner."
+      - name: parent_system_conflict
+        description: "True when owners match more than one system."
+        data_tests:
+          - not_null
+
+  - name: mart_hospital_condition_penalty_share
+    description: >
+      One row per hospital x condition: what each condition contributed to CMS's factor,
+      using CMS's own inputs (42 CFR 412.152). excess_term = DRG payment ratio x
+      max(ERR - peer median ERR, 0), and 0 when CMS's penalty indicator is N.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hrrp_supplemental')
+                field: ccn
+      - name: condition
+        description: "{{ doc('condition') }}"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["ami", "hf", "pn", "copd", "cabg", "tha_tka"]
+      - name: condition_label
+        description: "Condition name for charts."
+      - name: drg_payment_ratio
+        description: "Condition's share of base operating DRG payments (CMS)."
+      - name: err
+        description: "ERR CMS used in the payment calculation."
+      - name: peer_median_err
+        description: "Peer-group median ERR (the threshold)."
+      - name: eligible_discharges
+        description: "Eligible discharges (CMS)."
+      - name: penalty_indicator
+        description: "CMS's Y/N flag as published."
+      - name: neutrality_modifier
+        description: "CMS budget-neutrality modifier."
+      - name: counts_for_penalty
+        description: "penalty_indicator read as true/false."
+      - name: excess_term
+        description: "This condition's term in the formula."
+      - name: share_of_penalty
+        description: "excess_term divided by the hospital's sum of excess terms (NULL when the sum is 0)."
+
+  - name: mart_hospital_paf_recomputed
+    description: "CMS's factor re-derived from its own inputs: max(0.97, 1 - neutrality modifier x sum of excess terms). Tested against the published factor."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_hrrp_supplemental')
+                field: ccn
+      - name: neutrality_modifier
+        description: "CMS budget-neutrality modifier."
+      - name: sum_excess_terms
+        description: "Sum of the six excess terms."
+      - name: paf_recomputed
+        description: "Recomputed payment adjustment factor."
+
+  - name: mart_hospital_penalty
+    description: >
+      FY2026 HRRP penalty estimate, one row per hospital: (1 - CMS factor) x annualised
+      Medicare base DRG payments. The factor is CMS's exact number; the dollar base is our
+      estimate (docs/penalty_method.md), flagged per row in estimate_quality.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('mart_hospital')
+                field: ccn
+      - name: facility_name
+        description: "Hospital name."
+      - name: state
+        description: "Two-letter state."
+      - name: hospital_type
+        description: "CMS hospital type."
+      - name: hospital_ownership
+        description: "CMS ownership category."
+      - name: parent_system
+        description: "One of the four public chains, or NULL."
+      - name: is_teaching
+        description: "Has residents (cost report)."
+      - name: beds
+        description: "Beds."
+      - name: star_rating
+        description: "CMS overall star rating."
+      - name: payment_adjustment_factor
+        description: "{{ doc('payment_adjustment_factor') }}"
+      - name: is_penalized
+        description: "True when the factor is below 1."
+      - name: payment_reduction_rate
+        description: "1 - factor."
+      - name: cost_report_base_drg_payments
+        description: "Medicare base DRG payments on the cost report, before annualising."
+      - name: cr_fy_begin
+        description: "Cost report fiscal year start."
+      - name: cr_fy_end
+        description: "Cost report fiscal year end."
+      - name: cr_days
+        description: "Days covered by the cost report."
+      - name: net_patient_revenue
+        description: "Net patient revenue on the cost report."
+      - name: est_annual_base_drg_payments
+        description: "Base DRG payments scaled to 365 days (only for 180-400 day reports)."
+      - name: estimate_quality
+        description: "Why a hospital has, or lacks, a dollar estimate."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "no factor: not in FY2026 HRRP payment file"
+                  - "no base: cost report missing or blank DRG line"
+                  - "no base: cost report period under 180 or over 400 days"
+                  - "ok: full-year cost report"
+                  - "ok but annualised: partial-year cost report"
+      - name: est_penalty_usd
+        description: "Estimated FY2026 HRRP penalty in dollars = payment_reduction_rate x est_annual_base_drg_payments."
+      - name: est_penalty_share_of_net_patient_revenue
+        description: "Penalty as a share of annualised net patient revenue."
+
+  - name: mart_hospital_condition_penalty
+    description: "Each hospital's estimated dollars split across conditions by CMS's own contribution shares."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('mart_hospital_penalty')
+                field: ccn
+      - name: condition
+        description: "{{ doc('condition') }}"
+      - name: condition_label
+        description: "Condition name for charts."
+      - name: err
+        description: "ERR CMS used in the payment calculation."
+      - name: peer_median_err
+        description: "Peer-group median ERR."
+      - name: drg_payment_ratio
+        description: "Condition's share of base DRG payments."
+      - name: share_of_penalty
+        description: "Condition's share of the hospital's penalty."
+      - name: counts_for_penalty
+        description: "CMS penalty indicator as true/false."
+      - name: condition_penalty_usd
+        description: "est_penalty_usd x share_of_penalty."
+
+  - name: mart_hospital_penalty_wide
+    description: "mart_hospital_penalty plus one dollar column per condition and the top drivers in words; feeds the dashboards and analysis/output/hospital_penalty.csv."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('mart_hospital_penalty')
+                field: ccn
+      - name: facility_name
+        description: "Hospital name."
+      - name: state
+        description: "Two-letter state."
+      - name: hospital_type
+        description: "CMS hospital type."
+      - name: hospital_ownership
+        description: "CMS ownership category."
+      - name: parent_system
+        description: "One of the four public chains, or NULL."
+      - name: is_teaching
+        description: "Has residents (cost report)."
+      - name: beds
+        description: "Beds."
+      - name: star_rating
+        description: "CMS overall star rating."
+      - name: payment_adjustment_factor
+        description: "{{ doc('payment_adjustment_factor') }}"
+      - name: is_penalized
+        description: "True when the factor is below 1."
+      - name: payment_reduction_rate
+        description: "1 - factor."
+      - name: cost_report_base_drg_payments
+        description: "Medicare base DRG payments on the cost report, before annualising."
+      - name: cr_fy_begin
+        description: "Cost report fiscal year start."
+      - name: cr_fy_end
+        description: "Cost report fiscal year end."
+      - name: cr_days
+        description: "Days covered by the cost report."
+      - name: net_patient_revenue
+        description: "Net patient revenue on the cost report."
+      - name: est_annual_base_drg_payments
+        description: "Base DRG payments scaled to 365 days (only for 180-400 day reports)."
+      - name: estimate_quality
+        description: "Why a hospital has, or lacks, a dollar estimate."
+      - name: est_penalty_usd
+        description: "Estimated FY2026 HRRP penalty in dollars = payment_reduction_rate x est_annual_base_drg_payments."
+      - name: est_penalty_share_of_net_patient_revenue
+        description: "Penalty as a share of annualised net patient revenue."
+      - name: penalty_usd_ami
+        description: "Estimated penalty dollars attributed to AMI."
+      - name: penalty_usd_hf
+        description: "Estimated penalty dollars attributed to heart failure."
+      - name: penalty_usd_pn
+        description: "Estimated penalty dollars attributed to pneumonia."
+      - name: penalty_usd_copd
+        description: "Estimated penalty dollars attributed to COPD."
+      - name: penalty_usd_cabg
+        description: "Estimated penalty dollars attributed to CABG."
+      - name: penalty_usd_tha_tka
+        description: "Estimated penalty dollars attributed to hip/knee replacement."
+      - name: penalty_drivers
+        description: "Conditions behind the penalty with their share, e.g. 'Pneumonia 99%, COPD 1%' (penalized hospitals only)."

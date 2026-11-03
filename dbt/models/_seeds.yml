@@ -1,0 +1,32 @@
+version: 2
+
+seeds:
+  - name: state_fips
+    description: "USPS state abbreviation to Census state FIPS code (official ANSI/FIPS codes). CMS files use abbreviations, Census uses FIPS."
+    columns:
+      - name: state_abbr
+        description: "Two-letter USPS abbreviation."
+        data_tests: [unique, not_null]
+      - name: state_fips
+        description: "Two-digit Census state FIPS code, as text."
+        data_tests: [unique, not_null]
+  - name: system_owner_patterns
+    description: >
+      Hand-built crosswalk from CMS owner organization names to the four public hospital
+      companies. CMS never names the ultimate parent, so owner names are matched with
+      SQL ILIKE. Starting hypotheses: check qa.system_owner_names against each 10-K.
+    columns:
+      - name: system
+        description: "Parent company name."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["HCA Healthcare", "Tenet Healthcare", "Community Health Systems", "Universal Health Services"]
+      - name: cik
+        description: "SEC Central Index Key of the parent company (text)."
+      - name: owner_name_pattern
+        description: "ILIKE pattern matched against the owner organization name in CMS All Owners."
+        data_tests: [unique, not_null]
+      - name: note
+        description: "Why the pattern is there."

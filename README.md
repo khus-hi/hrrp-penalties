@@ -29,8 +29,8 @@ flowchart LR
     end
     Sources -->|ingest/download.py<br/>manifest + sha256| R[(data/raw)]
     R -->|ingest/load.py| DB[(DuckDB<br/>raw schema)]
-    DB -->|models/ SQL<br/>staging → intermediate → marts| M[mart.hospital<br/>one row per CCN]
-    M --> Q[checks/<br/>join funnel, assertions,<br/>factor recompute]
+    DB -->|dbt models<br/>staging → intermediate → marts| M[mart.hospital<br/>one row per CCN]
+    M --> Q[dbt tests<br/>join funnel, assertions,<br/>factor recompute]
     M --> P[analysis/<br/>penalty report]
     M --> X[analysis/<br/>ERR model: OLS + trees]
     M --> W[analysis/<br/>Excel workbook]

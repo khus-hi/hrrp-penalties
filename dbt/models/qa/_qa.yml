@@ -1,0 +1,130 @@
+version: 2
+
+# Report tables (not pass/fail). python -m models.build prints them in
+# docs/data_quality_report.md; the pass/fail checks are dbt tests.
+models:
+  - name: qa_join_funnel
+    description: "Hospitals left after each join, applied cumulatively in a fixed order, with the number dropped at each step. Tested by assert_join_funnel_is_consistent."
+    columns:
+      - name: step_order
+        description: "Step number, 1-7."
+        data_tests: [unique, not_null]
+      - name: step
+        description: "What the hospital must have to stay in."
+      - name: hospitals_remaining
+        description: "Hospitals that pass this step and every step before it."
+      - name: dropped_here
+        description: "Hospitals lost at this step (NULL for step 1)."
+  - name: qa_source_coverage
+    description: "The same joins measured one source at a time (not cumulative), so a weak source is easy to spot."
+    columns:
+      - name: source
+        description: "Source or field."
+      - name: matched
+        description: "Hospitals in mart.hospital with a value from this source."
+      - name: total
+        description: "Hospitals in mart.hospital."
+  - name: qa_unmatched_ccns
+    description: "Every CCN that failed a join, with the reason, so each one can be looked up."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+      - name: facility_name
+        description: "Hospital name (NULL for CCNs not in the HRRP file)."
+      - name: state
+        description: "Two-letter state."
+      - name: reason
+        description: "Which join failed."
+  - name: qa_suppressed_values
+    description: "Per condition, how many ERRs are missing, 'N/A' or 'Too Few to Report', and which CMS footnote codes appear."
+    columns:
+      - name: condition
+        description: "{{ doc('condition') }}"
+      - name: rows
+        description: "Rows in the HRRP file for this condition."
+      - name: err_reported
+        description: "Rows with a numeric ERR."
+      - name: err_missing
+        description: "Rows without one."
+      - name: err_na
+        description: "Rows where the ERR is the text 'N/A'."
+      - name: readmissions_too_few
+        description: "Rows where readmissions are 'Too Few to Report'."
+      - name: discharges_missing
+        description: "Rows with no discharge count."
+      - name: footnote_codes_seen
+        description: "Distinct CMS footnote codes."
+  - name: qa_non_numeric_values
+    description: "Text values that were turned into NULL during casting, and how often."
+    columns:
+      - name: field
+        description: "Which field."
+      - name: raw_value
+        description: "The text as published."
+      - name: n
+        description: "Rows with that text."
+  - name: qa_column_mapping_misses
+    description: "IPPS spreadsheet fields ingest/load.py could not match to a column (left NULL on purpose)."
+    columns:
+      - name: source
+        description: "hrrp_supplemental or hrrp_table15."
+      - name: field
+        description: "Field that was not found."
+  - name: qa_system_summary
+    description: "Hospitals matched to each parent system; check against each company's 10-K hospital count."
+    columns:
+      - name: parent_system
+        description: "Parent system."
+      - name: hrrp_hospitals_matched
+        description: "HRRP hospitals matched to it."
+      - name: with_stake_under_100pct
+        description: "Of those, how many the system owns less than 100% of (joint ventures)."
+  - name: qa_system_owner_names
+    description: "Every owner name that matched a system pattern, with the number of hospitals."
+    columns:
+      - name: system
+        description: "Parent system."
+      - name: owner_org_name
+        description: "Owner name in CMS All Owners."
+      - name: ccns
+        description: "Hospitals (any CCN, not only HRRP) with that owner."
+  - name: qa_cost_report_years
+    description: "How cost report fiscal-year ends line up with federal FY2026 (Oct 2025 to Sep 2026)."
+    columns:
+      - name: cost_report_fy_end_year
+        description: "Calendar year the cost report ends in (NULL = no cost report)."
+      - name: hospitals
+        description: "Hospitals in mart.hospital."
+  - name: qa_paf_recompute_mismatches
+    description: "Hospitals whose recomputed factor differs from CMS's by more than 0.0001 (should be empty)."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+      - name: paf_published
+        description: "CMS factor."
+      - name: paf_recomputed
+        description: "Our recomputed factor."
+      - name: diff
+        description: "Published minus recomputed."
+  - name: qa_paf_recompute_summary
+    description: "One-row summary of the factor recompute, shown in docs/penalty_report.md."
+    columns:
+      - name: hospitals_compared
+        description: "Hospitals in the supplemental file."
+      - name: mismatches
+        description: "Hospitals off by more than 0.0001."
+      - name: max_abs_diff
+        description: "Largest absolute difference."
+      - name: median_abs_diff
+        description: "Median absolute difference."
+  - name: qa_penalty_indicator_values
+    description: "CMS penalty indicator values by condition, and how many sit above the peer median."
+    columns:
+      - name: condition
+        description: "{{ doc('condition') }}"
+      - name: penalty_indicator
+        description: "Value as published."
+      - name: n
+        description: "Hospitals."
+      - name: n_err_above_median
+        description: "Of those, how many have an ERR above the peer-group median."

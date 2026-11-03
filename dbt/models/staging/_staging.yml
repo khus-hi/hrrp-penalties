@@ -1,0 +1,319 @@
+version: 2
+
+models:
+  - name: stg_hrrp_measures
+    description: "One row per hospital x HRRP condition from the CMS FY2026 HRRP hospital file. Performance period 07/01/2021-06/30/2024."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }} NULL here would mean the file's ID was not a valid 1-6 character code."
+        data_tests: [not_null]
+      - name: facility_name
+        description: "Hospital name as written in the HRRP file."
+      - name: state
+        description: "Two-letter state."
+      - name: measure_name
+        description: "CMS measure ID, e.g. READM-30-AMI-HRRP."
+      - name: condition
+        description: "{{ doc('condition') }} Parsed from measure_name."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ami", "hf", "pn", "copd", "cabg", "tha_tka"]
+      - name: err
+        description: "{{ doc('err') }}"
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "> 0"
+      - name: err_raw
+        description: "ERR exactly as published (keeps text such as 'N/A' so suppression can be counted)."
+      - name: discharges
+        description: "Number of eligible discharges. NULL when suppressed."
+      - name: discharges_raw
+        description: "Discharges exactly as published."
+      - name: readmissions
+        description: "Number of 30-day readmissions. NULL when suppressed."
+      - name: readmissions_raw
+        description: "Readmissions exactly as published (e.g. 'Too Few to Report')."
+      - name: predicted_rate
+        description: "Predicted readmission rate (%), from CMS's risk model for this hospital."
+      - name: expected_rate
+        description: "Expected readmission rate (%) for an average hospital with the same patients."
+      - name: footnote
+        description: "CMS footnote code(s) explaining a missing value."
+      - name: period_start
+        description: "Start of the performance period."
+      - name: period_end
+        description: "End of the performance period."
+
+  - name: stg_general_info
+    description: "Hospital attributes from CMS Hospital General Information. One row per CCN."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [unique, not_null]
+      - name: facility_name
+        description: "Hospital name."
+      - name: city
+        description: "City or town."
+      - name: state
+        description: "Two-letter state."
+      - name: zip5
+        description: "5-digit ZIP code, zero-padded."
+      - name: county_name
+        description: "County or parish name as CMS writes it (e.g. 'ST. LOUIS'). Not a FIPS code."
+      - name: hospital_type
+        description: "CMS hospital type, e.g. Acute Care Hospitals."
+      - name: hospital_ownership
+        description: "CMS ownership category, e.g. Proprietary, Voluntary non-profit - Private, Government - Local."
+      - name: has_emergency_services
+        description: "True when the hospital reports emergency services."
+      - name: star_rating
+        description: "CMS overall star rating 1-5. NULL when 'Not Available'."
+      - name: star_rating_raw
+        description: "Star rating exactly as published."
+
+  - name: stg_hrrp_supplemental
+    description: >
+      FY2026 payment adjustment factors and every input CMS used to compute them, from the
+      IPPS final rule HRRP supplemental file. One row per CCN. Nothing here is estimated.
+      Per condition (ami, hf, pn, copd, cabg, tha_tka) there are five columns: err_*,
+      peer_median_err_*, eligible_discharges_*, drg_payment_ratio_*, penalty_indicator_*.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [unique, not_null]
+      - name: payment_adjustment_factor
+        description: "{{ doc('payment_adjustment_factor') }}"
+      - name: payment_reduction_pct
+        description: "Payment reduction percentage as published (1 - factor, in percent)."
+      - name: dual_proportion
+        description: "Share of the hospital's Medicare stays that were dual-eligible (Medicare + full Medicaid). Sets the peer group."
+      - name: peer_group
+        description: "CMS peer group (quintile of dual proportion, 1-5). The peer group's median ERR is the penalty threshold."
+      - name: neutrality_modifier
+        description: "Budget-neutrality modifier CMS applies to the sum of excess terms (one national value)."
+      - name: err_ami
+        description: "ERR for AMI as used in the payment calculation."
+      - name: peer_median_err_ami
+        description: "Median ERR for AMI in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_ami
+        description: "Eligible AMI discharges."
+      - name: drg_payment_ratio_ami
+        description: "AMI base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_ami
+        description: "CMS's Y/N flag for whether AMI counts toward the penalty (N e.g. with too few cases)."
+      - name: err_hf
+        description: "ERR for heart failure as used in the payment calculation."
+      - name: peer_median_err_hf
+        description: "Median ERR for heart failure in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_hf
+        description: "Eligible heart failure discharges."
+      - name: drg_payment_ratio_hf
+        description: "heart failure base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_hf
+        description: "CMS's Y/N flag for whether heart failure counts toward the penalty (N e.g. with too few cases)."
+      - name: err_pn
+        description: "ERR for pneumonia as used in the payment calculation."
+      - name: peer_median_err_pn
+        description: "Median ERR for pneumonia in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_pn
+        description: "Eligible pneumonia discharges."
+      - name: drg_payment_ratio_pn
+        description: "pneumonia base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_pn
+        description: "CMS's Y/N flag for whether pneumonia counts toward the penalty (N e.g. with too few cases)."
+      - name: err_copd
+        description: "ERR for COPD as used in the payment calculation."
+      - name: peer_median_err_copd
+        description: "Median ERR for COPD in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_copd
+        description: "Eligible COPD discharges."
+      - name: drg_payment_ratio_copd
+        description: "COPD base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_copd
+        description: "CMS's Y/N flag for whether COPD counts toward the penalty (N e.g. with too few cases)."
+      - name: err_cabg
+        description: "ERR for CABG as used in the payment calculation."
+      - name: peer_median_err_cabg
+        description: "Median ERR for CABG in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_cabg
+        description: "Eligible CABG discharges."
+      - name: drg_payment_ratio_cabg
+        description: "CABG base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_cabg
+        description: "CMS's Y/N flag for whether CABG counts toward the penalty (N e.g. with too few cases)."
+      - name: err_tha_tka
+        description: "ERR for hip/knee replacement as used in the payment calculation."
+      - name: peer_median_err_tha_tka
+        description: "Median ERR for hip/knee replacement in the hospital's peer group; the penalty threshold."
+      - name: eligible_discharges_tha_tka
+        description: "Eligible hip/knee replacement discharges."
+      - name: drg_payment_ratio_tha_tka
+        description: "hip/knee replacement base operating DRG payments as a share of all base operating DRG payments (the weight in the formula)."
+      - name: penalty_indicator_tha_tka
+        description: "CMS's Y/N flag for whether hip/knee replacement counts toward the penalty (N e.g. with too few cases)."
+
+  - name: stg_hrrp_table15
+    description: "IPPS Table 15 payment adjustment factors, one row per CCN. Only a cross-check of the supplemental file."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [unique, not_null]
+      - name: payment_adjustment_factor
+        description: "Factor as printed in Table 15."
+
+  - name: stg_cost_report_all
+    description: "Every Medicare cost report (HCRIS) in the file, with the fields the model uses cast to numbers."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+      - name: rpt_rec_num
+        description: "HCRIS report record number."
+      - name: cr_fy_begin
+        description: "Cost report fiscal year start."
+      - name: cr_fy_end
+        description: "Cost report fiscal year end."
+      - name: cr_type_of_control
+        description: "HCRIS type-of-control code (ownership as reported on the cost report)."
+      - name: beds
+        description: "Number of beds."
+      - name: intern_resident_fte
+        description: "Intern and resident FTEs. Blank in HCRIS means no residents."
+      - name: medicare_discharges
+        description: "Title XVIII (Medicare) discharges."
+      - name: drg_amount_ex_outlier
+        description: "Worksheet E Part A line 1: Medicare FFS DRG payments excluding outliers."
+      - name: drg_amount_before_oct1
+        description: "Line 1.01: DRG amounts before October 1."
+      - name: drg_amount_after_oct1
+        description: "Line 1.02: DRG amounts on or after October 1."
+      - name: outlier_payments
+        description: "Outlier payments."
+      - name: dsh_payments
+        description: "Disproportionate share adjustment."
+      - name: ime_payments
+        description: "Indirect medical education payments."
+      - name: dsh_pct
+        description: "Medicare DSH patient percentage."
+      - name: net_patient_revenue
+        description: "Net patient revenue (all payers)."
+      - name: total_patient_revenue
+        description: "Total patient revenue (all payers)."
+      - name: net_income
+        description: "Net income."
+
+  - name: stg_cost_report
+    description: "One cost report per hospital: the one with the latest fiscal-year end, plus the base DRG amount the penalty is applied to."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [unique, not_null]
+      - name: n_reports_in_file
+        description: "How many reports this CCN had in the file (more than 1 e.g. after a change of ownership)."
+      - name: medicare_base_drg_payments
+        description: "Proxy for Medicare base operating DRG payments: line 1, or lines 1.01 + 1.02 when line 1 is blank."
+      - name: medicare_base_drg_source
+        description: "Which cost report line(s) medicare_base_drg_payments came from."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["line 1", "lines 1.01+1.02"]
+
+  - name: stg_enrollment_ccn
+    description: "PECOS enrollment ID to CCN bridge (one enrollment can cover several CCNs)."
+    columns:
+      - name: enrollment_id
+        description: "PECOS enrollment ID; joins to stg_owners."
+        data_tests: [not_null]
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [not_null]
+      - name: organization_name
+        description: "Legal name on the enrollment."
+      - name: doing_business_as_name
+        description: "Doing-business-as name."
+
+  - name: stg_owners
+    description: "Every owner of every enrollment from CMS Hospital All Owners."
+    columns:
+      - name: enrollment_id
+        description: "PECOS enrollment ID."
+      - name: associate_id_owner
+        description: "PECOS associate ID of the owner."
+      - name: owner_org_name
+        description: "Owner organization name, upper-cased and trimmed (matched to the system patterns)."
+      - name: owner_is_individual
+        description: "True when the owner is a person rather than an organization."
+      - name: role_code_owner
+        description: "PECOS role code (34 = direct owner, 35 = indirect owner of 5% or more)."
+      - name: role_text_owner
+        description: "Role description."
+      - name: pct_ownership
+        description: "Stated ownership percentage (self-reported to CMS)."
+      - name: owner_for_profit
+        description: "Owner flagged as for-profit."
+      - name: owner_chain_home_office
+        description: "Owner flagged as a chain home office."
+
+  - name: stg_acs_county
+    description: "ACS 2020-2024 5-year county estimates. Census 'no estimate' codes (large negatives) become NULL."
+    columns:
+      - name: county_fips
+        description: "5-digit county FIPS (state + county)."
+        data_tests: [unique, not_null]
+      - name: state_fips
+        description: "2-digit state FIPS."
+      - name: acs_name
+        description: "Census name, e.g. 'Suffolk County, Massachusetts'."
+      - name: acs_county_name
+        description: "County part of the name, e.g. 'Suffolk County'."
+      - name: county_key
+        description: "Normalised county name used to match CMS county names (no 'County', 'St.' spelled out, letters and digits only)."
+      - name: total_population
+        description: "Total population."
+      - name: median_age
+        description: "Median age."
+      - name: median_household_income
+        description: "Median household income (inflation-adjusted dollars)."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: share_age_65_plus
+        description: "Share of the population aged 65 or older."
+
+  - name: stg_zcta_county
+    description: "2020 ZCTA to county relationship, used as the ZIP fallback for county FIPS."
+    columns:
+      - name: zcta
+        description: "5-digit ZIP Code Tabulation Area."
+      - name: county_fips
+        description: "5-digit county FIPS."
+      - name: land_area_overlap
+        description: "Land area shared by the ZCTA and county (square meters); the largest overlap wins."
+
+  - name: stg_sec_annual
+    description: "Full-year 10-K facts (us-gaap, USD) for HCA, Tenet, CHS and UHS from SEC EDGAR XBRL companyfacts."
+    columns:
+      - name: cik
+        description: "SEC Central Index Key."
+      - name: entity_name
+        description: "Company name."
+      - name: tag
+        description: "us-gaap XBRL tag, e.g. Revenues."
+      - name: label
+        description: "Tag label."
+      - name: period_start
+        description: "Start of the fiscal year the fact covers."
+      - name: period_end
+        description: "End of the fiscal year the fact covers."
+      - name: value_usd
+        description: "Value in US dollars."
+      - name: fy_filed
+        description: "Fiscal year of the filing the fact came from."
+      - name: form
+        description: "10-K or 10-K/A."
+      - name: filed
+        description: "Filing date."

@@ -1,6 +1,6 @@
 # Data-quality report
 
-_Generated 2026-11-02 18:02 UTC by `python -m models.build` from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
+_Generated 2026-11-03 15:08 UTC by `python -m models.build` (dbt build) from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
 
 ## Join funnel (cumulative)
 
@@ -38,8 +38,8 @@ _Generated 2026-11-02 18:02 UTC by `python -m models.build` from the files in da
 | cost report has no Medicare base DRG amount | 32 |
 | no county FIPS (name and ZIP both failed) | 27 |
 | no cost report in HCRIS file | 21 |
-| not in Hospital General Information | 20 |
 | county FIPS found but not in ACS 2024 (e.g. old CT county) | 20 |
+| not in Hospital General Information | 20 |
 | in IPPS supplemental file but not in HRRP hospital file | 8 |
 
 
@@ -49,12 +49,12 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | condition | rows | err_reported | err_missing | err_na | readmissions_too_few | discharges_missing | footnote_codes_seen |
 |---|---|---|---|---|---|---|---|
-| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 29, 7, 1, 5 |
-| cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 1, 7, 29, 5 |
+| ami | 3055 | 1736 | 1319 | 1319 | 496 | 1748 | 1, 29, 5, 7 |
+| cabg | 3055 | 878 | 2177 | 2177 | 515 | 2674 | 1, 29, 5, 7 |
 | copd | 3055 | 2323 | 732 | 732 | 778 | 1503 | 1, 29, 5, 7 |
-| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 5, 29, 7, 1 |
-| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 29, 1, 7, 5 |
-| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 5, 29, 1, 7 |
+| hf | 3055 | 2621 | 434 | 434 | 305 | 731 | 1, 29, 5, 7 |
+| pn | 3055 | 2715 | 340 | 340 | 395 | 727 | 1, 29, 5, 7 |
+| tha_tka | 3055 | 1447 | 1608 | 1608 | 1194 | 2705 | 1, 29, 5, 7 |
 
 
 ## Text values turned into NULL
@@ -106,24 +106,97 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 |  | 21 |
 
 
-## Assertions (0 failing)
+## Raw data freshness (`dbt source freshness`)
 
-| test | failing_rows | result |
-|---|---|---|
-| mart has one row per CCN | 0 | pass |
-| every HRRP measure_name maps to a condition | 0 | pass |
-| every hospital has at most 6 HRRP rows | 0 | pass |
-| CCN in HRRP file is 6 characters | 0 | pass |
-| supplemental file has one row per CCN | 0 | pass |
-| General Info has one row per CCN | 0 | pass |
-| payment adjustment factor between 0.97 and 1.0 (42 CFR 412.154 floor) | 0 | pass |
-| supplemental factor equals Table 15 factor | 0 | pass |
-| ERR values are positive | 0 | pass |
-| Medicare base DRG payments are not negative | 0 | pass |
-| county FIPS is 5 digits | 0 | pass |
-| ACS median income has no Census sentinel codes left | 0 | pass |
-| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS | 0 | pass |
-| condition shares sum to 1 for every penalized hospital | 0 | pass |
-| condition dollars add up to hospital dollars | 0 | pass |
-| no penalty above 3% of the base | 0 | pass |
-| unpenalized hospitals (factor = 1) have $0 | 0 | pass |
+| source | last_loaded_utc | age_days | result |
+|---|---|---|---|
+| acs_county | 2026-11-03 15:08 | 0 | pass |
+| hospital_all_owners | 2026-11-03 15:08 | 0 | pass |
+| hospital_cost_report | 2026-11-03 15:08 | 0 | pass |
+| hospital_enrollments | 2026-11-03 15:08 | 0 | pass |
+| hospital_general_info | 2026-11-03 15:08 | 0 | pass |
+| hrrp_hospital | 2026-11-03 15:08 | 0 | pass |
+| hrrp_supplemental | 2026-11-03 15:08 | 0 | pass |
+| hrrp_table15 | 2026-11-03 15:08 | 0 | pass |
+| sec_facts | 2026-11-03 15:08 | 0 | pass |
+| zcta_county_rel | 2026-11-03 15:08 | 0 | pass |
+
+
+## Assertions: dbt tests (0 failing, 0 warnings, 72 tests)
+
+Generic tests are defined next to each column in `dbt/models/*/_*.yml`; singular tests are `dbt/tests/*.sql`. Each test's dbt name is in `qa.assertions.dbt_test`; its failing rows are kept in the `qa_failures` schema (`cd dbt && dbt test --select <dbt_test>` re-runs one).
+
+| test | models | failing_rows | result |
+|---|---|---|---|
+| accepted_values: int_hospital_county.county_match_method in 2 listed values | int_hospital_county | 0 | pass |
+| accepted_values: mart_hospital.hospital_ownership in 10 listed values | mart_hospital | 0 | pass |
+| accepted_values: mart_hospital_condition_penalty_share.condition in 6 listed values | mart_hospital_condition_penalty_share | 0 | pass |
+| accepted_values: mart_hospital_penalty.estimate_quality in 5 listed values | mart_hospital_penalty | 0 | pass |
+| accepted_values: stg_cost_report.medicare_base_drg_source in 2 listed values | stg_cost_report | 0 | pass |
+| accepted_values: stg_hrrp_measures.condition in 6 listed values | stg_hrrp_measures | 0 | pass |
+| accepted_values: system_owner_patterns.system in 4 listed values | system_owner_patterns | 0 | pass |
+| condition dollars add up to hospital dollars | mart_hospital_condition_penalty, mart_hospital_penalty | 0 | pass |
+| condition shares sum to 1 for every penalized hospital | mart_hospital_condition_penalty_share, stg_hrrp_supplemental | 0 | pass |
+| every hospital has at most 6 HRRP rows | stg_hrrp_measures | 0 | pass |
+| int_hospital_county.county_fips similar to '[0-9]{5}' | int_hospital_county | 0 | pass |
+| join funnel has 7 steps, starts at every HRRP hospital, never grows, ends at the complete rows of mart.hospital | mart_hospital, qa_join_funnel, stg_hrrp_measures | 0 | pass |
+| mart_hospital.county_fips similar to '[0-9]{5}' | mart_hospital | 0 | pass |
+| mart_hospital.medicare_base_drg_payments >= 0 | mart_hospital | 0 | pass |
+| mart_hospital.payment_adjustment_factor between 0.97 and 1.0 | mart_hospital | 0 | pass |
+| no penalty above 3% of the base | mart_hospital_penalty | 0 | pass |
+| not_null: int_hospital_county.ccn | int_hospital_county | 0 | pass |
+| not_null: int_hospital_system.ccn | int_hospital_system | 0 | pass |
+| not_null: mart_hospital.ccn | mart_hospital | 0 | pass |
+| not_null: mart_hospital.parent_system_conflict | mart_hospital | 0 | pass |
+| not_null: mart_hospital_condition_penalty.ccn | mart_hospital_condition_penalty | 0 | pass |
+| not_null: mart_hospital_condition_penalty_share.ccn | mart_hospital_condition_penalty_share | 0 | pass |
+| not_null: mart_hospital_paf_recomputed.ccn | mart_hospital_paf_recomputed | 0 | pass |
+| not_null: mart_hospital_penalty.ccn | mart_hospital_penalty | 0 | pass |
+| not_null: mart_hospital_penalty.estimate_quality | mart_hospital_penalty | 0 | pass |
+| not_null: mart_hospital_penalty_wide.ccn | mart_hospital_penalty_wide | 0 | pass |
+| not_null: qa_join_funnel.step_order | qa_join_funnel | 0 | pass |
+| not_null: state_fips.state_abbr | state_fips | 0 | pass |
+| not_null: state_fips.state_fips | state_fips | 0 | pass |
+| not_null: stg_acs_county.county_fips | stg_acs_county | 0 | pass |
+| not_null: stg_cost_report.ccn | stg_cost_report | 0 | pass |
+| not_null: stg_enrollment_ccn.ccn | stg_enrollment_ccn | 0 | pass |
+| not_null: stg_enrollment_ccn.enrollment_id | stg_enrollment_ccn | 0 | pass |
+| not_null: stg_general_info.ccn | stg_general_info | 0 | pass |
+| not_null: stg_hrrp_measures.ccn | stg_hrrp_measures | 0 | pass |
+| not_null: stg_hrrp_measures.condition | stg_hrrp_measures | 0 | pass |
+| not_null: stg_hrrp_supplemental.ccn | stg_hrrp_supplemental | 0 | pass |
+| not_null: stg_hrrp_table15.ccn | stg_hrrp_table15 | 0 | pass |
+| not_null: system_owner_patterns.owner_name_pattern | system_owner_patterns | 0 | pass |
+| not_null: system_owner_patterns.system | system_owner_patterns | 0 | pass |
+| recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS within 0.0001 for every hospital | mart_hospital_paf_recomputed, stg_hrrp_supplemental | 0 | pass |
+| relationships: int_hospital_county.ccn -> stg_general_info.ccn | int_hospital_county, stg_general_info | 0 | pass |
+| relationships: int_hospital_system.ccn -> stg_enrollment_ccn.ccn | int_hospital_system, stg_enrollment_ccn | 0 | pass |
+| relationships: int_hospital_system.parent_system -> system_owner_patterns.system | int_hospital_system, system_owner_patterns | 0 | pass |
+| relationships: int_owner_matches.ccn -> stg_enrollment_ccn.ccn | int_owner_matches, stg_enrollment_ccn | 0 | pass |
+| relationships: mart_hospital.ccn -> stg_hrrp_measures.ccn | mart_hospital, stg_hrrp_measures | 0 | pass |
+| relationships: mart_hospital.county_fips -> stg_acs_county.county_fips | mart_hospital, stg_acs_county | 0 | pass |
+| relationships: mart_hospital.parent_system -> system_owner_patterns.system | mart_hospital, system_owner_patterns | 0 | pass |
+| relationships: mart_hospital_condition_penalty.ccn -> mart_hospital_penalty.ccn | mart_hospital_condition_penalty, mart_hospital_penalty | 0 | pass |
+| relationships: mart_hospital_condition_penalty_share.ccn -> stg_hrrp_supplemental.ccn | mart_hospital_condition_penalty_share, stg_hrrp_supplemental | 0 | pass |
+| relationships: mart_hospital_paf_recomputed.ccn -> stg_hrrp_supplemental.ccn | mart_hospital_paf_recomputed, stg_hrrp_supplemental | 0 | pass |
+| relationships: mart_hospital_penalty.ccn -> mart_hospital.ccn | mart_hospital, mart_hospital_penalty | 0 | pass |
+| relationships: mart_hospital_penalty_wide.ccn -> mart_hospital_penalty.ccn | mart_hospital_penalty, mart_hospital_penalty_wide | 0 | pass |
+| stg_acs_county.median_household_income >= 0 | stg_acs_county | 0 | pass |
+| stg_hrrp_measures.err > 0 | stg_hrrp_measures | 0 | pass |
+| supplemental factor equals Table 15 factor | mart_hospital | 0 | pass |
+| unique: int_hospital_county.ccn | int_hospital_county | 0 | pass |
+| unique: int_hospital_system.ccn | int_hospital_system | 0 | pass |
+| unique: mart_hospital.ccn | mart_hospital | 0 | pass |
+| unique: mart_hospital_paf_recomputed.ccn | mart_hospital_paf_recomputed | 0 | pass |
+| unique: mart_hospital_penalty.ccn | mart_hospital_penalty | 0 | pass |
+| unique: mart_hospital_penalty_wide.ccn | mart_hospital_penalty_wide | 0 | pass |
+| unique: qa_join_funnel.step_order | qa_join_funnel | 0 | pass |
+| unique: state_fips.state_abbr | state_fips | 0 | pass |
+| unique: state_fips.state_fips | state_fips | 0 | pass |
+| unique: stg_acs_county.county_fips | stg_acs_county | 0 | pass |
+| unique: stg_cost_report.ccn | stg_cost_report | 0 | pass |
+| unique: stg_general_info.ccn | stg_general_info | 0 | pass |
+| unique: stg_hrrp_supplemental.ccn | stg_hrrp_supplemental | 0 | pass |
+| unique: stg_hrrp_table15.ccn | stg_hrrp_table15 | 0 | pass |
+| unique: system_owner_patterns.owner_name_pattern | system_owner_patterns | 0 | pass |
+| unpenalized hospitals (factor = 1) have $0 | mart_hospital_penalty | 0 | pass |

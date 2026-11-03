@@ -1,0 +1,10 @@
+# Where dbt writes. DuckDB is a single local file, so there is no server or password.
+# HRRP_DB_PATH is set by `python -m models.build`; the default works when you run
+# `dbt ...` from inside this dbt/ folder.
+hrrp:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('HRRP_DB_PATH', '../data/hrrp.duckdb') }}"
+      threads: 4
