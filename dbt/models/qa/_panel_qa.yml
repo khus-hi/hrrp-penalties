@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: qa_panel_column_map
+    description: "Audit trail of the cross-year column harmonising: which raw column fed which panel field each year."
+    columns:
+      - name: competing_columns
+        description: "Number of raw columns of the same year mapped to the same field. Must be 1."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "= 1"
+  - name: qa_panel_year_coverage
+    description: "One row per HRRP year FY2016-FY2027: loaded or missing, hospitals, conditions, performance period from config vs file."
+  - name: qa_panel_measure_coverage
+    description: "One row per year x condition: hospitals with an ERR, CMS penalty indicators, penalties, and a suppression check."

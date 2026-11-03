@@ -7,7 +7,7 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 ```
 
 ## 1. Download (`ingest/download.py`)
-- **What:** fetches 13 official sources (CMS, SEC, Census) into `data/raw/<source>/`.
+- **What:** fetches 13 official sources (CMS, SEC, Census) into `data/raw/<source>/`, plus the FY2016-FY2027 HRRP supplemental files into `data/raw/hrrp_history/fy<YEAR>/` (section 9).
 - **Why it's built this way:** raw files are never edited, so any number can be traced back to what the agency served. `manifest.json` records URL, time and SHA-256 for each file. CMS provider-data links change on every refresh, so the script asks CMS's metastore API for the current link. data.cms.gov APIs are paged 5,000 rows at a time. SEC requests send your `User-Agent` from `.env` and stay under SEC's 10-requests-per-second limit.
 
 ## 2. Load (`ingest/load.py`)
@@ -57,6 +57,14 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 - **Refresh:** monthly, the full pipeline runs on GitHub's machines and opens a pull request if any output changed.
 - **Schema check:** a source whose file hash changed *and* whose columns changed stops the refresh, so a renamed CMS column can't quietly become NULLs.
 - Setup and talking points: [automation.md](automation.md).
+
+## 9. Multi-year panel, FY2016-FY2027 (`mart.fct_hospital_condition_year`)
+- **Sources:** each year's IPPS final rule HRRP supplemental file (CMS's payment inputs), listed with its cms.gov landing page and performance period in `ingest/config.py` `HRRP_YEARS`, and optionally the archived Provider Data Catalog HRRP files saved by hand in `data/raw/pdc_archive/`. `python -m ingest.download` tries each URL, then scrapes the landing page; a year it can't get goes in `data/raw/hrrp_history/missing_years.json` and shows as `missing` in `qa.panel_year_coverage`. A missing year is never filled in.
+- **Harmonising names:** CMS renamed the columns several times. The loader stacks every year with its own column names (`raw.hrrp_supplemental_history`); `dbt/macros/harmonize.sql` maps them to one set by regex when the model compiles. `qa.panel_column_map` is the audit trail (which raw column fed which field, each year), and a test fails if two columns of one year compete for a field.
+- **The mart:** one row per CCN x condition x year: ERR, peer group (dual-proportion quintile, FY2019+), CMS's peer median, eligible discharges, DRG ratio, CMS's penalty indicator, `penalized_condition`, the payment factor, the performance period, and where each came from (`err_source`, `penalized_source`, `perf_period_source`).
+- **Known breaks** (`seeds/hrrp_known_breaks.csv`, each with the CMS page and sentence): FY2022-FY2024 leave out January-June 2020 (COVID-19), FY2023 pneumonia was suppressed from payment, FY2019 started peer groups, CABG starts FY2017, FY2027 uses 2 years. Rows carry `covid_2020_excluded`, `measure_suppressed` and `break_notes`.
+- **Tests:** one row per CCN x condition x year (error); ERR between 0.5 and 2; peer median recomputed from the panel = CMS's published median (FY2019+, full data only); one published median per group; config periods = the file's Start/End Date; seed breaks agree with the data; the panel's FY2026 rows = the single-year pipeline's (error).
+- **Report:** `make panel` writes [panel_report.md](panel_report.md): hospitals per year, how many appear in every year, and attrition.
 
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.

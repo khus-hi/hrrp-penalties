@@ -42,6 +42,26 @@ sources:
         description: "Census ACS 2020-2024 5-year estimates by county (population, median age, median household income, 65+ by sex)."
       - name: sec_facts
         description: "SEC EDGAR XBRL companyfacts for HCA (CIK 860730), Tenet (70318), UHS (352915) and CHS (1108109), flattened."
+      - name: hrrp_supplemental_history
+        description: >
+          IPPS final rule HRRP supplemental file of every payment year FY2016-FY2027 that
+          could be downloaded, stacked by column name (each year keeps CMS's own column
+          names; NULL where a year lacks a column). fiscal_year and source_file say where
+          each row came from; source_ccn is the CCN cell ingest/load.py used to find the
+          header row. Harmonised in stg_hrrp_supplemental_history.
+      - name: hrrp_hospital_history
+        description: >
+          Provider Data Catalog HRRP hospital files of every loaded year (current file as
+          snapshot 'current', plus archived ZIPs saved in data/raw/pdc_archive/), stacked by
+          column name. Has the performance period Start/End Date of each year.
+      - name: hrrp_history_files
+        description: "One row per HRRP year: whether ingest/load.py found that year's supplemental file, which sheet it used, or why it is missing."
+        config:
+          freshness: null
+      - name: hrrp_program_years
+        description: "ingest/config.py HRRP_YEARS as a table: performance period of each payment year and where the dates came from."
+        config:
+          freshness: null
       - name: column_mapping_log
         description: "Which spreadsheet column ingest/load.py matched to each field of the IPPS files (NULL = not found, left empty)."
         config:

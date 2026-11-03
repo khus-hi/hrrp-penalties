@@ -94,5 +94,6 @@
       "sha256": "3ed41278d637dc249e0323306f68be8a6c234e3090f4de88ef328dee71aeaaaf",
       "downloaded_at": "2026-11-02T16:33:10.382845+00:00"
     }
-  }
+  },
+  "panel_tables_note": "hrrp_supplemental_history, hrrp_hospital_history, hrrp_history_files and hrrp_program_years were added on 2026-11-03 from the real FY2026 rows already in hrrp_supplemental_original.csv and hrrp_hospital.csv (30 hospitals, restacked with ingest.load functions); other years are marked missing until the next `python -m ingest.fixtures sample`."
 }

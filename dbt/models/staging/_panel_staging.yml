@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_hrrp_supplemental_history
+    description: >
+      Every year's HRRP supplemental file, one row per hospital x year, with CMS's
+      changing column names mapped to one set (macros/harmonize.sql). See
+      qa.panel_column_map for which raw column fed which field each year.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "HRRP payment year."
+        data_tests: [not_null]
+  - name: stg_hrrp_hospital_history
+    description: "Provider Data Catalog HRRP hospital files, one row per hospital x condition x year (latest snapshot per year)."
+    columns:
+      - name: condition
+        description: "{{ doc('condition') }}"
+        data_tests:
+          - not_null:
+              config:
+                where: "measure_name IS NOT NULL"
+  - name: stg_hrrp_program_years
+    description: "Each payment year FY2016-FY2027: performance period (ingest/config.py) and whether its supplemental file was loaded."
+    columns:
+      - name: fiscal_year
+        description: "HRRP payment year."
+        data_tests: [unique, not_null]
+      - name: period_checked
+        description: "file, cms or rule: where the period dates came from (see ingest/config.py)."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["file", "cms", "rule"]
+
+  - name: int_hrrp_condition_year
+    description: "Supplemental file unpivoted to one row per hospital x condition x year, for the conditions each year's file covers."

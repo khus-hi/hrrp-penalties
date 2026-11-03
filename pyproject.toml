@@ -17,6 +17,7 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.1",
     "openpyxl>=3.1",
+    "xlrd>=2.0",  # older CMS HRRP files (FY2016-FY2018) may be .xls
     "python-dotenv>=1.0",
     "statsmodels>=0.14",
     "scikit-learn>=1.4",
