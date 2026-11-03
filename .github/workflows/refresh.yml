@@ -1,0 +1,109 @@
+# Monthly refresh: re-download every source, rebuild, rerun the analysis, and open a
+# pull request if any output changed. You review and merge it; nothing goes to main
+# on its own. Needs two repository secrets (README "Automated refresh"):
+#   SEC_USER_AGENT  e.g. "Your Name you@example.com" (SEC requires a contact)
+#   CENSUS_API_KEY  your free key from api.census.gov/data/key_signup.html
+name: Monthly data refresh
+
+on:
+  schedule:
+    - cron: "17 6 5 * *"   # 06:17 UTC on the 5th of every month
+  workflow_dispatch:        # "Run workflow" button on the Actions tab
+
+permissions:
+  contents: write          # push the refresh branch
+  pull-requests: write     # open the pull request
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      HRRP_DB_PATH: ${{ github.workspace }}/data/hrrp.duckdb
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Check the secrets are set
+        run: |
+          missing=0
+          [[ -n "$SEC_USER_AGENT" ]] || { echo "::error::Repository secret SEC_USER_AGENT is not set"; missing=1; }
+          [[ -n "$CENSUS_API_KEY" ]] || { echo "::error::Repository secret CENSUS_API_KEY is not set"; missing=1; }
+          exit $missing
+
+      - name: Download every source (CMS, SEC, Census)
+        run: python -m ingest.download
+
+      - name: Load into DuckDB
+        run: python -m ingest.load
+
+      - name: Schema check (fail if a file changed and its columns changed)
+        run: python -m ingest.schema_check
+
+      - name: Build models and data tests, write docs/data_quality_report.md
+        run: python -m models.build
+
+      - name: Analysis (penalty report, ERR model, open checks, factor cross-check)
+        run: make analysis
+
+      - name: Unit tests
+        run: pytest
+
+      - name: Keep the download manifest for this run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ github.run_id }}
+          path: |
+            data/raw/manifest.json
+            docs/data_quality_report.md
+          if-no-files-found: ignore
+
+      - name: Did any output change? (ignoring "_Generated <time>" lines)
+        id: diff
+        run: |
+          git add --intent-to-add docs analysis/output   # so brand-new files count too
+          if git diff --quiet -I'^_Generated' -- docs analysis/output; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No output changed this month; no pull request." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "Automated monthly refresh from run [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              echo
+              echo "The schema check passed, so every source kept its column layout. Review the numbers before merging."
+              echo
+              echo '```'
+              git diff --stat -I'^_Generated' -- docs analysis/output
+              echo '```'
+            } > "$RUNNER_TEMP/pr_body.md"
+            git reset -q
+          fi
+
+      - name: Open or update the refresh pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automated/data-refresh
+          delete-branch: true
+          add-paths: |
+            docs/**
+            analysis/output/**
+            ingest/schema_lock.json
+          commit-message: "Monthly data refresh (${{ github.run_id }})"
+          title: "Monthly data refresh"
+          body-path: ${{ runner.temp }}/pr_body.md
