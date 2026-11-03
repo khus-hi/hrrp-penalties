@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hrrp"
+version = "0.1.0"
+description = "FY2026 Medicare HRRP readmission penalties in dollars, by hospital, condition and hospital chain, from live CMS, Census and SEC data."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Khushi" }]
+# Lower bounds only: the versions the pipeline was built and run with, or newer.
+dependencies = [
+    "duckdb>=1.1",
+    "requests>=2.31",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "openpyxl>=3.1",
+    "python-dotenv>=1.0",
+    "statsmodels>=0.14",
+    "scikit-learn>=1.4",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Repository = "https://github.com/khus-hi/hrrp-penalties"
+
+# Keep the existing top-level packages (so `python -m ingest.download` etc. still work
+# and the folders recruiters see don't move), plus `hrrp`, which holds the pure,
+# unit-tested logic the scripts call.
+[tool.setuptools.packages.find]
+include = ["hrrp*", "ingest*", "models*", "analysis*", "dashboard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hrrp", "ingest", "models", "analysis", "dashboard"]
+
+[tool.ruff.lint.per-file-ignores]
+# The pipeline scripts predate the linter. They are left as they are so this refactor
+# changes no behaviour; new code in hrrp/ and tests/ gets the full rule set.
+"ingest/*" = ["E501", "E702", "E731", "B023", "B904", "B905", "UP017", "I001"]
+"models/*" = ["E501", "E702", "E731", "B023", "B904", "B905", "UP017", "I001"]
+"analysis/*" = ["E501", "E702", "E731", "B023", "B904", "B905", "UP017", "I001", "E402"]
+"dashboard/*" = ["E501", "E702", "E731", "B023", "B904", "B905", "UP017", "I001"]

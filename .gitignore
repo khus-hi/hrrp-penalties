@@ -6,3 +6,8 @@ data/
 *.duckdb.wal
 __pycache__/
 .venv/
+# packaging and tool caches
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/

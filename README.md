@@ -64,7 +64,7 @@ Endpoints, join keys and caveats are in [docs/data_sources.md](docs/data_sources
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"           # installs the project and its dependencies (pyproject.toml)
 cp .env.example .env               # add SEC_USER_AGENT and a free CENSUS_API_KEY
 python -m ingest.download && python -m ingest.load && python -m models.build
 python -m analysis.penalty_report  # docs/penalty_report.md + analysis/output/*.csv
@@ -72,7 +72,10 @@ python -m analysis.err_model       # docs/err_model_report.md + docs/figures/
 python -m analysis.build_workbook  # analysis/output/hrrp_chain_workbook.xlsx
 python -m dashboard.export_tableau # CSVs for Tableau (docs/tableau_build_guide.md)
 python -m analysis.open_checks     # coverage checks (docs/open_checks_report.md)
+make test                          # unit tests, no downloads needed
 ```
+
+Or run the main steps with `make all` (`make help` lists every target).
 
 ## Limits, and what I'd do next
 
