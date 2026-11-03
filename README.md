@@ -1,5 +1,7 @@
 # What Medicare's readmission penalty costs hospitals, in dollars
 
+[![CI](https://github.com/khus-hi/hrrp-penalties/actions/workflows/ci.yml/badge.svg)](https://github.com/khus-hi/hrrp-penalties/actions/workflows/ci.yml)
+
 **Problem:** CMS publishes each hospital's HRRP payment cut as a factor like 0.9950, never as dollars. So quality and finance teams can't easily see what readmissions actually cost them, which conditions drive the cost, or how much it matters to a hospital chain.
 
 **Approach:** I rebuilt CMS's penalty formula from public data, applied it to each hospital's Medicare payments, and followed the dollars up to conditions, states and the four public hospital chains. Everything comes from live government and SEC data: no Kaggle, no synthetic numbers.
@@ -77,9 +79,14 @@ make test                          # unit tests, no downloads needed
 
 Or run the main steps with `make all` (`make help` lists every target).
 
+## Automated checks and refresh
+
+- **CI** ([ci.yml](.github/workflows/ci.yml)) runs on every push and pull request: ruff, pytest, then `dbt build` against a small DuckDB made from about 50 real hospitals checked into [tests/fixtures/](tests/fixtures/README.md), so it never calls CMS, SEC or Census.
+- **Monthly refresh** ([refresh.yml](.github/workflows/refresh.yml)) re-downloads every source, rebuilds, reruns the analysis and opens a pull request if any output changed. It stops if a source file changed and its columns changed too ([schema check](ingest/schema_check.py)).
+- Setup steps, including the two repository secrets, are in [docs/automation.md](docs/automation.md).
+
 ## Limits, and what I'd do next
 
 - **The dollars are estimates.** They use 2024-25 cost-report payments rather than FY2026 claims, and CMS publishes no FY2026 dollar total to check against. Next: cross-check the payment base against the CMS IPPS Impact File.
 - **Chain hospital counts differ from the 10-Ks.** Tenet maps to 61 hospitals in CMS ownership records against 50 in its 10-K, and CHS to 50 against 69 ([open checks](docs/open_checks_report.md)). Next: reconcile hospital by hospital against the 10-K facility lists.
 - **The model is cross-sectional.** Next: track the same hospitals across FY2023 to FY2027 to see whether penalized hospitals actually improve, which is the program's real test.
-- **Automate refresh.** Next: a scheduled GitHub Actions run that re-pulls the CMS files when they're updated and rebuilds the outputs.

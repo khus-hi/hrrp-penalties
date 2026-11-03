@@ -4,11 +4,14 @@ Each entry was checked against the official page on 2026-11-01 (see docs/data_so
 "verified" says what was confirmed live; anything not confirmed is flagged so the
 pipeline can check it on first download rather than trusting it blindly.
 """
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
-DB_PATH = ROOT / "data" / "hrrp.duckdb"
+# HRRP_DB_PATH lets CI point every script (and dbt) at the small fixture database
+# instead of the full one, without changing any code.
+DB_PATH = Path(os.getenv("HRRP_DB_PATH", ROOT / "data" / "hrrp.duckdb"))
 
 PROGRAM_YEAR = 2026  # HRRP payment year = federal FY2026 (Oct 1 2025 to Sep 30 2026)
 
