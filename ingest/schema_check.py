@@ -14,7 +14,8 @@ How it works:
       - source not in the lock          -> exits 1 (accept it with --accept)
 
 "Schema" means the column names of the raw.* table that ingest.load built from the
-file (the untouched sheet for the IPPS spreadsheets), the XBRL fact fields for SEC,
+file (the untouched sheet for the IPPS spreadsheets; for each FY2016-FY2027 HRRP
+supplemental file, the columns that year fills in raw.hrrp_supplemental_history), the XBRL fact fields for SEC,
 and the member file names for the IPPS impact zip. Column order is ignored, because
 the loader matches columns by name.
 
@@ -51,6 +52,14 @@ RAW_TABLE = {
 
 def schema_of(name: str, entry: dict, con) -> list[str] | None:
     """The schema of one downloaded source, or None if it has no column layout (e.g. HTML)."""
+    if name.startswith("hrrp_supplemental_fy"):
+        # One year of the stacked panel table: the columns that year's sheet filled.
+        fy = name.removeprefix("hrrp_supplemental_fy")
+        df = con.execute("SELECT * FROM raw.hrrp_supplemental_history WHERE fiscal_year = ?", [fy]).df()
+        if df.empty:
+            raise SystemExit(f"No FY{fy} rows in raw.hrrp_supplemental_history. Run python -m ingest.load first.")
+        helpers = IGNORE_COLUMNS | {"fiscal_year", "source_file", "source_ccn"}
+        return sorted(c for c in df.columns if c not in helpers and df[c].notna().any())
     if name in RAW_TABLE:
         cols = con.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_schema = 'raw' AND table_name = ?",

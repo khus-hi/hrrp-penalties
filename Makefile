@@ -21,11 +21,15 @@ build:  ## dbt build: seeds, models and tests, then docs/data_quality_report.md
 docs:  ## Generate the dbt docs site (lineage graph, column descriptions) and serve it on localhost:8080
 	cd dbt && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs generate && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs serve
 
-analysis:  ## Penalty report, ERR model, open checks, and the Python-vs-SQL-vs-CMS factor check
+analysis:  ## Penalty report, ERR model, open checks, factor check, and the FY2016-FY2027 panel report
 	$(PYTHON) -m analysis.penalty_report
 	$(PYTHON) -m analysis.err_model
 	$(PYTHON) -m analysis.open_checks
 	$(PYTHON) -m analysis.check_factor
+	$(PYTHON) -m analysis.panel_report
+
+panel:  ## FY2016-FY2027 panel report only (docs/panel_report.md), after make build
+	$(PYTHON) -m analysis.panel_report
 
 workbook:  ## Rebuild the Excel workbook (overwrites analysis/output/hrrp_chain_workbook.xlsx)
 	$(PYTHON) -m analysis.build_workbook

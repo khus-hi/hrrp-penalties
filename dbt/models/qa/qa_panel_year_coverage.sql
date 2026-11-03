@@ -1,13 +1,14 @@
 -- One row per HRRP payment year FY2016-FY2027: did we get CMS's file, how many
--- hospitals and conditions it has, and its performance period. A year CMS no longer
+-- hospitals (CCNs in the supplemental file) and conditions it has, and its performance period. A year CMS no longer
 -- publishes (or that failed to download) shows status 'missing' with the reason.
 SELECT
     y.fiscal_year,
     y.supplemental_status,
     y.supplemental_file,
     y.supplemental_note,
-    count(DISTINCT f.ccn)                                   AS hospitals,
-    count(DISTINCT f.ccn) FILTER (WHERE f.err IS NOT NULL)  AS hospitals_with_any_err,
+    count(DISTINCT f.ccn) FILTER (WHERE f.in_supplemental)  AS hospitals,
+    count(DISTINCT f.ccn) FILTER (WHERE f.in_supplemental AND f.err IS NOT NULL) AS hospitals_with_any_err,
+    count(DISTINCT f.ccn) FILTER (WHERE NOT f.in_supplemental) AS pdc_only_hospitals,
     count(DISTINCT f.condition)                             AS conditions,
     string_agg(DISTINCT f.condition, ',' ORDER BY f.condition) AS condition_list,
     count(*) FILTER (WHERE f.in_pdc)                        AS rows_with_pdc_file,
