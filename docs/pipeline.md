@@ -47,5 +47,11 @@ python -m models.build     ->  stg.* -> int.* -> mart.hospital, qa.*  + docs/dat
 - **Python vs SQL:** the SQL still builds every table. `python -m analysis.check_factor` recomputes the factor in Python for every hospital and checks it against both the SQL and CMS.
 - **Run it:** `make test` (unit tests) or `make all` (whole pipeline, then tests). `make help` lists every target.
 
+## 8. CI and the monthly refresh (`.github/workflows/`, `ingest/fixtures.py`, `ingest/schema_check.py`)
+- **CI:** on every push and pull request, ruff, pytest, then the models and data tests on a fixture DuckDB of about 50 real hospitals (`tests/fixtures/`). No downloads.
+- **Refresh:** monthly, the full pipeline runs on GitHub's machines and opens a pull request if any output changed.
+- **Schema check:** a source whose file hash changed *and* whose columns changed stops the refresh, so a renamed CMS column can't quietly become NULLs.
+- Setup and talking points: [automation.md](automation.md).
+
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
