@@ -72,20 +72,20 @@ R² = 0.069, adjusted R² = 0.066, n = 2,576.
 
 ## Is the linear model missing nonlinearity?
 
-- 5-fold cross-validated R²: linear 0.058 (±0.015), gradient-boosted tree 0.070 (±0.021). If the tree isn't clearly better, the linear model is a fair summary.
+- 5-fold cross-validated R²: linear 0.058 (±0.014), gradient-boosted tree 0.066 (±0.009). If the tree isn't clearly better, the linear model is a fair summary.
 
 Permutation importance on a 25% held-out set (drop in R² when a feature is shuffled):
 
 | feature | importance_r2_drop |
 |---|---|
-| dual_10pp | 0.0767 |
-| income_10k | 0.0457 |
-| log2_beds | 0.0442 |
-| ownership_For-profit | 0.0295 |
-| age65_5pp | 0.0152 |
-| ownership_Nonprofit | 0.0017 |
-| ownership_Other | 0.0000 |
+| dual_10pp | 0.0703 |
+| income_10k | 0.0382 |
+| ownership_For-profit | 0.0213 |
+| log2_beds | 0.0161 |
+| age65_5pp | 0.0056 |
+| ownership_Nonprofit | 0.0010 |
 | ownership_Physician-owned | 0.0000 |
+| ownership_Other | 0.0000 |
 
 
 ![Partial dependence](figures/err_tree_partial_dependence.png)

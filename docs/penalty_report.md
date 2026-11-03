@@ -1,6 +1,6 @@
 # FY2026 HRRP penalty estimate
 
-_Generated 2026-11-02 18:00 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 0._
+_Generated 2026-11-03 15:07 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 0._
 
 ## National
 
