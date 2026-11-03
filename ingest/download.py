@@ -11,10 +11,12 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 import zipfile
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 import requests
 from dotenv import load_dotenv
@@ -61,10 +63,11 @@ def _get(url, **kw):
             time.sleep(wait)
 
 
-def fetch_file(name, url, force=False, extract=False):
+def fetch_file(name, url, force=False, extract=False, log_name=None):
     out_dir = C.RAW / name
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / url.rsplit("/", 1)[-1]
+    # cms.gov sometimes serves a re-upload as "file.zip-0"; save it as file.zip
+    path = out_dir / re.sub(r"\.zip-\d+$", ".zip", url.rsplit("/", 1)[-1])
     if path.exists() and not force:
         print(f"[skip] {name}: {path.name} already downloaded")
         if extract and zipfile.is_zipfile(path):  # e.g. a zip you saved by hand
@@ -79,7 +82,7 @@ def fetch_file(name, url, force=False, extract=False):
         with zipfile.ZipFile(path) as z:
             z.extractall(out_dir)
             print(f"       extracted: {z.namelist()}")
-    _log({"name": name, "url": url, "file": str(path.relative_to(C.ROOT)),
+    _log({"name": log_name or name, "url": url, "file": str(path.relative_to(C.ROOT)),
           "bytes": path.stat().st_size, "sha256": _sha256(path),
           "downloaded_at": datetime.now(timezone.utc).isoformat()})
     return path
@@ -185,9 +188,80 @@ def fetch_acs(force=False):
           "sha256": _sha256(path), "downloaded_at": datetime.now(timezone.utc).isoformat()})
 
 
+def zip_links_on(page_url: str) -> list[str]:
+    """The .zip links on a cms.gov landing page (used when we have no direct link)."""
+    html = _get(page_url).text
+    links = re.findall(r'href="([^"]+?\.zip(?:-\d+)?)"', html, re.I)
+    return [urljoin(page_url, u) for u in dict.fromkeys(links)]
+
+
+def fetch_hrrp_history(force=False, years=None):
+    """Download every year's IPPS HRRP supplemental file; log the years we can't get.
+
+    For each fiscal year: try the URLs in config.HRRP_YEARS, then any .zip linked from the
+    year's landing page. Each success goes in the manifest (url, sha256, size) like every
+    other source. Each failure goes in data/raw/hrrp_history/missing_years.json with the
+    reason, so the panel shows the year as missing instead of silently skipping it.
+    """
+    C.HRRP_HISTORY_RAW.mkdir(parents=True, exist_ok=True)
+    missing = {}
+    for fy, spec in C.HRRP_YEARS.items():
+        if years and fy not in years:
+            continue
+        name = f"hrrp_supplemental_fy{fy}"
+        folder = C.HRRP_HISTORY_RAW / f"fy{fy}"
+        if not force and folder.exists() and any(folder.glob("*.zip")):
+            print(f"[skip] {name}: already downloaded")
+            for z in folder.glob("*.zip"):
+                if zipfile.is_zipfile(z):
+                    with zipfile.ZipFile(z) as zf:
+                        zf.extractall(folder)
+            continue
+        tried, errors = list(spec["supplemental_urls"]), []
+        got = None
+        for url in tried:
+            try:
+                got = fetch_file(f"hrrp_history/fy{fy}", url, force=force, extract=True, log_name=name)
+                break
+            except (requests.RequestException, OSError) as e:
+                errors.append(f"{url}: {e}")
+        if got is None:
+            try:
+                scraped = [u for u in zip_links_on(spec["landing_page"]) if u not in tried]
+                scraped = [u for u in scraped if re.search(r"readmission|hrrp", u, re.I)] or scraped
+            except requests.RequestException as e:
+                scraped = []
+                errors.append(f"{spec['landing_page']}: {e}")
+            for url in scraped:
+                try:
+                    got = fetch_file(f"hrrp_history/fy{fy}", url, force=force, extract=True, log_name=name)
+                    break
+                except (requests.RequestException, OSError) as e:
+                    errors.append(f"{url}: {e}")
+        if got is None:
+            print(f"[MISS] FY{fy}: no supplemental file could be downloaded")
+            missing[str(fy)] = {"landing_page": spec["landing_page"], "errors": errors or ["no .zip link found"],
+                                "checked_at": datetime.now(timezone.utc).isoformat()}
+    log = json.loads(C.MISSING_YEARS_LOG.read_text()) if C.MISSING_YEARS_LOG.exists() else {}
+    for fy in C.HRRP_YEARS:
+        if (years is None or fy in years) and str(fy) not in missing:
+            log.pop(str(fy), None)  # a year we now have is no longer missing
+    log.update(missing)
+    C.MISSING_YEARS_LOG.write_text(json.dumps(dict(sorted(log.items())), indent=2) + "\n")
+    if missing:
+        # A missing year is a gap in the panel, not a broken pipeline: warn and carry on.
+        # ingest.load records it in raw.hrrp_history_files and the panel report lists it.
+        print(f"\nWARNING: {len(missing)} HRRP year(s) missing: {', '.join('FY' + y for y in missing)}. "
+              f"Details in {C.MISSING_YEARS_LOG.relative_to(C.ROOT)}. If CMS still publishes one, save its "
+              f"ZIP by hand into data/raw/hrrp_history/fy<YEAR>/ and re-run.")
+    return missing
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true", help="re-download even if present")
+    ap.add_argument("--history-only", action="store_true",
+                    help="only the FY2016-FY2027 HRRP supplemental files (skip the other sources)")
     args = ap.parse_args()
     C.RAW.mkdir(parents=True, exist_ok=True)
 
@@ -201,6 +275,10 @@ def main():
             print(f"[FAIL] {label}: {e}")
             failures.append((label, manual_url, folder))
 
+    attempt("HRRP history FY2016-FY2027", lambda: fetch_hrrp_history(force=args.force),
+            manual_url=C.ARCHIVE_PAGE, folder=C.HRRP_HISTORY_RAW)
+    if args.history_only:
+        C.FILES, C.CMS_API_DATASETS = {}, {}
     for name, spec in C.FILES.items():
         url = spec.get("url") or spec["fallback_url"]
         attempt(name,
@@ -210,8 +288,9 @@ def main():
                 manual_url=url, folder=C.RAW / name)
     for name, uuid in C.CMS_API_DATASETS.items():
         attempt(name, lambda n=name, u=uuid: fetch_cms_api(n, u, force=args.force))
-    attempt("SEC companyfacts", lambda: fetch_sec(force=args.force))
-    attempt("Census ACS", lambda: fetch_acs(force=args.force))
+    if not args.history_only:
+        attempt("SEC companyfacts", lambda: fetch_sec(force=args.force))
+        attempt("Census ACS", lambda: fetch_acs(force=args.force))
 
     if failures:
         print(f"\n{len(failures)} source(s) failed:")

@@ -12,8 +12,10 @@ Design choices worth explaining in an interview:
 
 Run:  python -m ingest.load
 """
+import io
 import json
 import re
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -66,9 +68,11 @@ def load_df(con, table, df):
 
 
 def read_csv_text(path, **kw):
+    """Read a CSV as text. `path` can also be the raw bytes of a file inside a ZIP."""
     for enc in ("utf-8", "cp1252"):
         try:
-            return pd.read_csv(path, dtype=str, keep_default_na=False, encoding=enc, **kw)
+            src = io.BytesIO(path) if isinstance(path, bytes) else path
+            return pd.read_csv(src, dtype=str, keep_default_na=False, encoding=enc, **kw)
         except UnicodeDecodeError:
             continue
     raise ValueError(f"could not decode {path}")
@@ -107,6 +111,32 @@ def read_tables(folder: Path):
         if p.suffix.lower() in (".csv", ".txt") and "description" not in p.name.lower():
             sep = "\t" if "\t" in p.read_text(errors="ignore")[:2000] else ","
             yield p.name, read_csv_text(p, header=None, sep=sep, on_bad_lines="skip")
+
+
+def pick_sheet(folder: Path):
+    """The data sheet in a folder: has a CCN header and an adjustment-factor column.
+
+    Older HRRP files may carry the factor only in Table 15, so a sheet with a CCN and an
+    excess-readmission-ratio column is accepted as a second choice. Returns
+    (label, DataFrame with the sheet's own header names, name of the CCN column) or None.
+    """
+    second = None
+    for label, raw in read_tables(folder):
+        h = find_header_row(raw)
+        if h is None:
+            continue
+        df = raw.iloc[h + 1:].copy()
+        df.columns = [str(c).strip() for c in raw.iloc[h].tolist()]
+        df = df.loc[:, [c for c in df.columns if c and c.lower() != "nan"]]
+        df = df.dropna(how="all")
+        ccn_cols = match(df.columns, *HOSPITAL_FIELDS["ccn"])
+        if not ccn_cols:
+            continue
+        if match(df.columns, *HOSPITAL_FIELDS["payment_adjustment_factor"]):
+            return label, df, ccn_cols[0]
+        if second is None and match(df.columns, r"\berr\b|excess.?readmission.?ratio", None):
+            second = (label, df, ccn_cols[0])
+    return second
 
 
 def match(cols, include, exclude):
@@ -184,6 +214,120 @@ def load_acs(con):
     load_df(con, "raw.acs_county", df)
 
 
+# ---------- multi-year HRRP panel (FY2016-FY2027) ------------------------------------
+def _unique_norm(cols) -> list[str]:
+    """snake_case names, with _2, _3 ... added if two headers normalise to the same name."""
+    seen, out = {}, []
+    for c in cols:
+        n = norm(c) or "unnamed"
+        seen[n] = seen.get(n, 0) + 1
+        out.append(n if seen[n] == 1 else f"{n}_{seen[n]}")
+    return out
+
+
+def load_hrrp_history(con):
+    """Every year's supplemental sheet, stacked into raw.hrrp_supplemental_history.
+
+    The sheets are NOT renamed to a common layout here: each keeps its own (snake_case)
+    column names, and a column that a year doesn't have is NULL for that year. The
+    harmonising (which column is the ERR in FY2017 vs FY2026) happens in dbt, in
+    stg_hrrp_supplemental_history, where it is visible and tested. Two helper columns:
+      fiscal_year  - the HRRP payment year of the folder the file came from
+      source_ccn   - the cell from the column this loader used to find the header row
+    raw.hrrp_history_files gets one row per year: loaded, or missing and why.
+    """
+    frames, files = [], []
+    missing_log = json.loads(C.MISSING_YEARS_LOG.read_text()) if C.MISSING_YEARS_LOG.exists() else {}
+    for fy in C.HRRP_YEARS:
+        folder = C.HRRP_HISTORY_RAW / f"fy{fy}"
+        picked = pick_sheet(folder) if folder.exists() else None
+        if picked is None:
+            why = ("not downloaded: " + "; ".join(missing_log[str(fy)]["errors"])[:500]
+                   if str(fy) in missing_log else
+                   "no folder" if not folder.exists() else "no sheet with a CCN column and a factor or ERR column")
+            files.append((fy, "missing", None, None, None, why))
+            print(f"  hrrp history FY{fy}: MISSING ({why[:80]})")
+            continue
+        label, df, ccn_col = picked
+        out = df.copy()
+        out.columns = _unique_norm(df.columns)
+        out.insert(0, "source_ccn", df[ccn_col].to_numpy())
+        out.insert(0, "source_file", label)
+        out.insert(0, "fiscal_year", str(fy))
+        frames.append(out.astype("string"))
+        files.append((fy, "loaded", label, str(len(out)), str(len(df.columns)), None))
+        print(f"  hrrp history FY{fy}: {label}, {len(out):,} rows, {len(df.columns)} columns")
+    if frames:
+        load_df(con, "raw.hrrp_supplemental_history", pd.concat(frames, ignore_index=True, sort=False))
+    load_df(con, "raw.hrrp_history_files", pd.DataFrame(
+        files, columns=["fiscal_year", "status", "source_file", "rows", "columns", "note"]))
+    load_df(con, "raw.hrrp_program_years", pd.DataFrame([
+        {"fiscal_year": fy, "period_start": s["period"][0], "period_end": s["period"][1],
+         "period_checked": s["period_checked"], "period_source": s.get("period_source"),
+         "landing_page": s["landing_page"], "note": s.get("note")}
+        for fy, s in C.HRRP_YEARS.items()]))
+
+
+def _fy_from_pdc(member: str, df: pd.DataFrame) -> int | None:
+    """HRRP payment year of a Provider Data Catalog HRRP file.
+
+    First the "FY_2026" in the file name; otherwise match the file's End Date to a
+    period end in config.HRRP_YEARS. None if neither works (the file is then skipped
+    and reported, not guessed).
+    """
+    m = re.search(r"fy[ _-]?(20\d\d)", member, re.I)
+    if m:
+        return int(m.group(1))
+    if "end_date" in df.columns:
+        ends = pd.to_datetime(df["end_date"], errors="coerce", format="mixed").dropna()
+        if not ends.empty:
+            end = ends.mode().iloc[0].date().isoformat()
+            for fy, spec in C.HRRP_YEARS.items():
+                if spec["period"][1] == end:
+                    return fy
+    return None
+
+
+def _pdc_members(path: Path, depth=0):
+    """(member name, bytes) of every HRRP CSV in an archive ZIP (and ZIPs inside it)."""
+    with zipfile.ZipFile(path) as z:
+        for info in z.infolist():
+            name = info.filename
+            if name.lower().endswith(".zip") and depth == 0:
+                inner = C.PDC_ARCHIVE_RAW / "_inner" / Path(name).name
+                inner.parent.mkdir(parents=True, exist_ok=True)
+                inner.write_bytes(z.read(info))
+                yield from _pdc_members(inner, depth + 1)
+            elif (name.lower().endswith(".csv") and re.search(r"readmissions?.?reduction|hrrp", name, re.I)
+                  and "description" not in name.lower()):
+                yield name, z.read(info)
+
+
+def load_hrrp_hospital_history(con, current: pd.DataFrame):
+    """Per-hospital HRRP files of every year, stacked into raw.hrrp_hospital_history.
+
+    The current year's file (raw.hrrp_hospital) is always included as snapshot
+    'current'. Archived years come from ZIPs saved by hand in data/raw/pdc_archive/.
+    One HRRP year shows up in many monthly snapshots; all are kept here (with the
+    snapshot name) and dbt keeps the latest one per year.
+    """
+    cur = current.copy()
+    cur.columns = _unique_norm(current.columns)
+    frames = [cur.assign(fiscal_year=str(C.PROGRAM_YEAR), snapshot="current")]
+    if C.PDC_ARCHIVE_RAW.exists():
+        for z in sorted(C.PDC_ARCHIVE_RAW.glob("*.zip")):
+            for member, blob in _pdc_members(z):
+                df = read_csv_text(blob)
+                df.columns = _unique_norm(df.columns)
+                fy = _fy_from_pdc(member, df)
+                if fy is None:
+                    print(f"  pdc archive {z.name}:{member}: fiscal year not recognised, skipped")
+                    continue
+                frames.append(df.assign(fiscal_year=str(fy), snapshot=f"{z.name}:{member}"))
+                print(f"  pdc archive FY{fy}: {z.name}:{member} ({len(df):,} rows)")
+    load_df(con, "raw.hrrp_hospital_history", pd.concat(frames, ignore_index=True, sort=False))
+
+
 def main():
     C.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(C.DB_PATH))
@@ -192,7 +336,8 @@ def main():
                 "(source VARCHAR, field VARCHAR, matched_column VARCHAR, all_candidates VARCHAR)")
     print("Loading raw tables:")
 
-    load_df(con, "raw.hrrp_hospital", read_csv_text(only_file(C.RAW / "hrrp_hospital", "*.csv")))
+    hrrp_hospital = read_csv_text(only_file(C.RAW / "hrrp_hospital", "*.csv"))
+    load_df(con, "raw.hrrp_hospital", hrrp_hospital)
     load_df(con, "raw.hospital_general_info",
             read_csv_text(only_file(C.RAW / "hospital_general_info", "*.csv")))
     map_ipps_table(con, "hrrp_supplemental", C.RAW / "hrrp_supplemental", wanted_conditions=True)
@@ -206,6 +351,10 @@ def main():
             read_csv_text(only_file(C.RAW / "zcta_county_rel", "*.txt"), sep="|"))
     load_sec(con)
     load_acs(con)
+
+    print("\nMulti-year HRRP panel:")
+    load_hrrp_history(con)
+    load_hrrp_hospital_history(con, hrrp_hospital)
 
     # The seeds/ CSVs are loaded by `dbt seed` (part of `python -m models.build`).
 
