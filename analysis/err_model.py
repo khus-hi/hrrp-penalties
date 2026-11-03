@@ -60,6 +60,29 @@ TERM_TEXT = {
 }
 
 
+def add_composite_err(df: pd.DataFrame, conds=CONDS) -> pd.DataFrame:
+    """Add err_composite, total_discharges and n_conditions.
+
+    Composite ERR = average of the per-condition ERRs, weighted by eligible discharges,
+    over the conditions CMS reported an ERR for. A condition with a missing ERR adds
+    nothing to the numerator or the denominator. Hospitals with no weight get NaN.
+    """
+    df = df.copy()
+    num = sum(df[f"err_{c}"].fillna(0) * df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0)
+              for c in conds)
+    den = sum(df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0) for c in conds)
+    df["err_composite"] = num / den.replace(0, np.nan)
+    df["total_discharges"] = den
+    df["n_conditions"] = sum(df[f"err_{c}"].notna().astype(int) for c in conds)
+    return df
+
+
+def pct(s) -> pd.Series:
+    """Put a proportion on a 0-100 scale whatever the source used (0-1 or 0-100)."""
+    s = pd.to_numeric(s, errors="coerce")
+    return s * 100 if s.max(skipna=True) <= 1.5 else s
+
+
 def load_data() -> pd.DataFrame:
     con = duckdb.connect(str(CFG.DB_PATH), read_only=True)
     err_cols = ", ".join(f"s.err_{c}, s.eligible_discharges_{c}" for c in CONDS)
@@ -72,18 +95,7 @@ def load_data() -> pd.DataFrame:
     """).df()
     con.close()
 
-    # Composite ERR, weighted by eligible discharges, over conditions CMS reported
-    num = sum(df[f"err_{c}"].fillna(0) * df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0)
-              for c in CONDS)
-    den = sum(df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0) for c in CONDS)
-    df["err_composite"] = num / den.replace(0, np.nan)
-    df["total_discharges"] = den
-    df["n_conditions"] = sum(df[f"err_{c}"].notna().astype(int) for c in CONDS)
-
-    # Put proportions on a percent scale whatever the source used (0-1 or 0-100)
-    def pct(s):
-        s = pd.to_numeric(s, errors="coerce")
-        return s * 100 if s.max(skipna=True) <= 1.5 else s
+    df = add_composite_err(df)
 
     df["dual_10pp"] = pct(df["dual_proportion"]) / 10
     df["dsh_10pp"] = pct(df["dsh_pct"]) / 10

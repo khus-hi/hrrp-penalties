@@ -1,5 +1,7 @@
 # What Medicare's readmission penalty costs hospitals, in dollars
 
+[![CI](https://github.com/khus-hi/hrrp-penalties/actions/workflows/ci.yml/badge.svg)](https://github.com/khus-hi/hrrp-penalties/actions/workflows/ci.yml)
+
 **Problem:** CMS publishes each hospital's HRRP payment cut as a factor like 0.9950, never as dollars. So quality and finance teams can't easily see what readmissions actually cost them, which conditions drive the cost, or how much it matters to a hospital chain.
 
 **Approach:** I rebuilt CMS's penalty formula from public data, applied it to each hospital's Medicare payments, and followed the dollars up to conditions, states and the four public hospital chains. Everything comes from live government and SEC data: no Kaggle, no synthetic numbers.
@@ -42,6 +44,7 @@ Joins: CCN (6-character string) links the CMS files. Ownership goes through Enro
 
 - **Python:** pandas, requests, statsmodels (robust and clustered OLS), scikit-learn (gradient-boosted trees, permutation importance), matplotlib
 - **SQL:** DuckDB, with layered models and data-quality assertions
+- **Testing:** pytest unit tests on the SQL models and Python helpers, ruff, GitHub Actions CI
 - **Excel:** openpyxl. Every number is a live formula, with editable scenario and ROI inputs
 - **Tableau Public:** five linked dashboards with LOD expressions, parameters and filter actions
 - All free. API keys live in a git-ignored `.env`
@@ -64,7 +67,7 @@ Endpoints, join keys and caveats are in [docs/data_sources.md](docs/data_sources
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 cp .env.example .env               # add SEC_USER_AGENT and a free CENSUS_API_KEY
 python -m ingest.download && python -m ingest.load && python -m models.build
 python -m analysis.penalty_report  # docs/penalty_report.md + analysis/output/*.csv
@@ -73,6 +76,8 @@ python -m analysis.build_workbook  # analysis/output/hrrp_chain_workbook.xlsx
 python -m dashboard.export_tableau # CSVs for Tableau (docs/tableau_build_guide.md)
 python -m analysis.open_checks     # coverage checks (docs/open_checks_report.md)
 ```
+
+Or use the Makefile: `make install`, `make all`. Run the tests with `make test` (or `python -m pytest`). They need no downloads: each one builds a few hand-made hospitals in an in-memory DuckDB and runs the real SQL models on them, so they check CMS's penalty formula, the 3% cap and the condition split, along with the SQL cleaning macros and the composite-ERR and Shapley R² helpers.
 
 ## Limits, and what I'd do next
 
