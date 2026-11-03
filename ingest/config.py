@@ -159,8 +159,11 @@ HRRP_YEARS = {
         "period": ("2017-07-01", "2019-12-01"), "period_checked": "cms", "period_source": _QRC_FY2022,
     },
     2023: {
-        "supplemental_urls": ["https://www.cms.gov/files/zip/fy-2023-ipps-final-rule-hospital-readmissions-"
-                              "reduction-program-supplemental-data-file.zip-0"],
+        # Link from CMS's "Files for FY 2023 Final Rule and Correction Notice" page,
+        # https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/acute-inpatient-files-download/files-fy-2023-final-rule-correction-notice
+        # (The archive page's ...supplemental-data-file.zip-0 link serves CMS's FY2024 file, checked
+        # 2026-11-03 on a real download: FY2024_Final_Rule_Supplemental_File.xlsx, sheet "FR FY 2024".)
+        "supplemental_urls": ["https://www.cms.gov/files/zip/fy-2023-ipps-final-rule-hrrp-supplemental-file.zip"],
         "landing_page": _NEW + "archived-supplemental-data-files/fy-2023-ipps-final-rule-hospital-readmissions-"
                                "reduction-program-supplemental-data-file",
         "period": ("2018-07-01", "2021-06-30"), "period_checked": "rule",
