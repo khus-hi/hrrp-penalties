@@ -16,9 +16,6 @@ Models, in order of how much to trust them:
   4. A gradient-boosted tree (5-fold cross-validated) to look for nonlinearity.
 Every number in the report is computed here from the live data; nothing is typed in.
 """
-from itertools import combinations
-from math import factorial
-
 import duckdb
 import matplotlib
 matplotlib.use("Agg")
@@ -34,9 +31,11 @@ from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from statsmodels.stats.diagnostic import het_breuschpagan, linear_reset
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
+from hrrp.err import CONDITIONS as CONDS
+from hrrp.err import composite_err, pct
+from hrrp.shapley import shapley_r2
 from ingest import config as CFG  # not "C": patsy formulas use C() for categoricals
 
-CONDS = ["ami", "hf", "pn", "copd", "cabg", "tha_tka"]
 LABELS = {"ami": "AMI", "hf": "Heart failure", "pn": "Pneumonia", "copd": "COPD",
           "cabg": "CABG", "tha_tka": "Hip/knee"}
 REPORT = CFG.ROOT / "docs" / "err_model_report.md"
@@ -72,19 +71,12 @@ def load_data() -> pd.DataFrame:
     """).df()
     con.close()
 
-    # Composite ERR, weighted by eligible discharges, over conditions CMS reported
-    num = sum(df[f"err_{c}"].fillna(0) * df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0)
-              for c in CONDS)
-    den = sum(df[f"eligible_discharges_{c}"].where(df[f"err_{c}"].notna(), 0).fillna(0) for c in CONDS)
-    df["err_composite"] = num / den.replace(0, np.nan)
-    df["total_discharges"] = den
-    df["n_conditions"] = sum(df[f"err_{c}"].notna().astype(int) for c in CONDS)
+    # Composite ERR, weighted by eligible discharges, over conditions CMS reported (hrrp/err.py)
+    comp = composite_err(df, CONDS)
+    for col in comp:  # err_composite, total_discharges, n_conditions
+        df[col] = comp[col]
 
-    # Put proportions on a percent scale whatever the source used (0-1 or 0-100)
-    def pct(s):
-        s = pd.to_numeric(s, errors="coerce")
-        return s * 100 if s.max(skipna=True) <= 1.5 else s
-
+    # Put proportions on a percent scale whatever the source used (0-1 or 0-100): hrrp.err.pct
     df["dual_10pp"] = pct(df["dual_proportion"]) / 10
     df["dsh_10pp"] = pct(df["dsh_pct"]) / 10
     df["income_10k"] = df["county_median_household_income"] / 10_000
@@ -136,28 +128,6 @@ def plain_english(row) -> str:
     return (f"Holding the other factors fixed, {what} goes with readmissions about "
             f"{abs(eff):.2f}% {direction} relative to expected "
             f"(95% CI {row.ci_low*100:+.2f}% to {row.ci_high*100:+.2f}%; {sig}).")
-
-
-def shapley_r2(data, groups: dict):
-    """Exact Shapley split of R-squared across predictor groups (2^k small OLS fits)."""
-    names = list(groups)
-    r2 = {}
-    for k in range(len(names) + 1):
-        for subset in combinations(names, k):
-            terms = [t for g in subset for t in groups[g]]
-            formula = "err_composite ~ " + (" + ".join(terms) if terms else "1")
-            r2[frozenset(subset)] = smf.ols(formula, data=data).fit().rsquared
-    n = len(names)
-    out = {}
-    for g in names:
-        total = 0.0
-        others = [x for x in names if x != g]
-        for k in range(n):
-            for subset in combinations(others, k):
-                w = factorial(k) * factorial(n - k - 1) / factorial(n)
-                total += w * (r2[frozenset(subset) | {g}] - r2[frozenset(subset)])
-        out[g] = total
-    return out, r2[frozenset(names)]
 
 
 def df_md(df: pd.DataFrame, floatfmt="{:.4f}") -> str:
