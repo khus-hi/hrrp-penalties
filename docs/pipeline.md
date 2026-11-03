@@ -66,5 +66,12 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 - **Tests:** one row per CCN x condition x year (error); ERR between 0.5 and 2; peer median recomputed from the panel = CMS's published median (FY2019+, full data only); one published median per group; config periods = the file's Start/End Date; seed breaks agree with the data; the panel's FY2026 rows = the single-year pipeline's (error).
 - **Report:** `make panel` writes [panel_report.md](panel_report.md): hospitals per year, how many appear in every year, and attrition.
 
+## 10. Does a penalty lower later readmissions? Regression discontinuity (`hrrp/causal/rd.py`)
+- **Design:** from FY2019 a condition is penalized only if its ERR is above its peer group's median (and it had 25+ eligible discharges). Running variable = ERR minus peer median, cutoff 0; outcome = the same condition's ERR 3 payment years later (no overlap with FY t's window). FY t+1 is shown but labelled contaminated (its window shares two years with FY t's); FY t+4 is a timing check.
+- **Sharp, not fuzzy:** with the 25-case rule applied first, CMS's indicator is exactly ERR > median (checked every run, and on FY2026: all 1,551 above-median "N" rows have fewer than 25 discharges). The full sample is fuzzy and is run as a fuzzy RD for comparison. Rows exactly at the median are dropped (CMS's rule is strictly "above").
+- **Estimation:** rdrobust local-linear, triangular kernel, MSE-optimal bandwidth, robust bias-corrected CIs; pooled with condition x year fixed effects as covariates and SEs clustered by hospital, then each condition.
+- **Checks:** rddensity density test, covariate balance (beds, dual share, ownership, teaching, the pre-period ERR, attrition), placebo cutoffs at -0.05 and +0.05, a donut without abs(x) < 0.002, half and double bandwidth.
+- **Report:** `make rd` writes [rd_report.md](rd_report.md), `docs/figures/rd/*.png` and `analysis/output/rd_*.csv`.
+
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
