@@ -1,0 +1,43 @@
+source,field,matched_column,all_candidates
+hrrp_supplemental,ccn,Hospital CCN,Hospital CCN
+hrrp_supplemental,payment_adjustment_factor,Payment adjustment factor,Payment adjustment factor
+hrrp_supplemental,payment_reduction_pct,Payment reduction percentage,Payment reduction percentage
+hrrp_supplemental,dual_proportion,Dual proportion,Dual proportion
+hrrp_supplemental,peer_group,Peer group assignment,Peer group assignment
+hrrp_supplemental,neutrality_modifier,Neutrality modifier,Neutrality modifier
+hrrp_supplemental,err_ami,ERR for AMI,ERR for AMI
+hrrp_supplemental,peer_median_err_ami,Peer group median ERR for AMI,Peer group median ERR for AMI
+hrrp_supplemental,eligible_discharges_ami,Number of eligible discharges for AMI,Number of eligible discharges for AMI
+hrrp_supplemental,penalty_indicator_ami,Penalty indicator for AMI,Penalty indicator for AMI
+hrrp_supplemental,drg_payment_ratio_ami,DRG payment ratio for AMI,DRG payment ratio for AMI
+hrrp_supplemental,err_hf,ERR for HF,ERR for HF
+hrrp_supplemental,peer_median_err_hf,Peer group median ERR for HF,Peer group median ERR for HF
+hrrp_supplemental,eligible_discharges_hf,Number of eligible discharges for HF,Number of eligible discharges for HF
+hrrp_supplemental,penalty_indicator_hf,Penalty indicator for HF,Penalty indicator for HF
+hrrp_supplemental,drg_payment_ratio_hf,DRG payment ratio for HF,DRG payment ratio for HF
+hrrp_supplemental,err_pn,ERR for pneumonia,ERR for pneumonia
+hrrp_supplemental,peer_median_err_pn,Peer group median ERR for pneumonia,Peer group median ERR for pneumonia
+hrrp_supplemental,eligible_discharges_pn,Number of eligible discharges for pneumonia,Number of eligible discharges for pneumonia
+hrrp_supplemental,penalty_indicator_pn,Penalty indicator for pneumonia,Penalty indicator for pneumonia
+hrrp_supplemental,drg_payment_ratio_pn,DRG payment ratio for pneumonia,DRG payment ratio for pneumonia
+hrrp_supplemental,err_copd,ERR for COPD,ERR for COPD
+hrrp_supplemental,peer_median_err_copd,Peer group median ERR for COPD,Peer group median ERR for COPD
+hrrp_supplemental,eligible_discharges_copd,Number of eligible discharges for COPD,Number of eligible discharges for COPD
+hrrp_supplemental,penalty_indicator_copd,Penalty indicator for COPD,Penalty indicator for COPD
+hrrp_supplemental,drg_payment_ratio_copd,DRG payment ratio for COPD,DRG payment ratio for COPD
+hrrp_supplemental,err_cabg,ERR for CABG,ERR for CABG
+hrrp_supplemental,peer_median_err_cabg,Peer group median ERR for CABG,Peer group median ERR for CABG
+hrrp_supplemental,eligible_discharges_cabg,Number of eligible discharges for CABG,Number of eligible discharges for CABG
+hrrp_supplemental,penalty_indicator_cabg,Penalty indicator for CABG,Penalty indicator for CABG
+hrrp_supplemental,drg_payment_ratio_cabg,DRG payment ratio for CABG,DRG payment ratio for CABG
+hrrp_supplemental,err_tha_tka,ERR for THA/TKA,ERR for THA/TKA
+hrrp_supplemental,peer_median_err_tha_tka,Peer group median ERR for THA/TKA,Peer group median ERR for THA/TKA
+hrrp_supplemental,eligible_discharges_tha_tka,Number of eligible discharges for THA/TKA,Number of eligible discharges for THA/TKA
+hrrp_supplemental,penalty_indicator_tha_tka,Penalty indicator for THA/TKA,Penalty indicator for THA/TKA
+hrrp_supplemental,drg_payment_ratio_tha_tka,DRG payment ratio for THA/TKA,DRG payment ratio for THA/TKA
+hrrp_table15,ccn,Hospital CMS Certification Number (CCN),Hospital CMS Certification Number (CCN)
+hrrp_table15,payment_adjustment_factor,FY 2026 Payment Adjustment Factor,FY 2026 Payment Adjustment Factor
+hrrp_table15,payment_reduction_pct,,""
+hrrp_table15,dual_proportion,,""
+hrrp_table15,peer_group,,""
+hrrp_table15,neutrality_modifier,,""
