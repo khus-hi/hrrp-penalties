@@ -1,0 +1,93 @@
+version: 2
+
+models:
+  - name: int_hospital_county
+    description: >
+      Hospital to county FIPS. First choice: state + county name matched to exactly one
+      ACS county. Fallback: hospital ZIP -> 2020 ZCTA -> county with the largest land
+      overlap. Known gap: ACS 2022+ uses Connecticut planning regions.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_general_info')
+                field: ccn
+      - name: state
+        description: "Two-letter state."
+      - name: county_name
+        description: "County name from General Information."
+      - name: zip5
+        description: "Hospital ZIP code."
+      - name: county_fips
+        description: "5-digit county FIPS, or NULL when name and ZIP both failed."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "similar to '[0-9]{5}'"
+      - name: county_match_method
+        description: "'county name' or 'zip fallback'."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["county name", "zip fallback"]
+      - name: name_match_count
+        description: "How many ACS counties the name matched (only 1 is accepted)."
+      - name: n_counties_for_zip
+        description: "How many counties the hospital's ZCTA overlaps."
+
+  - name: int_owner_matches
+    description: "Every (hospital, owner) pair where the owner name matches a parent-system pattern in seeds/system_owner_patterns.csv."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_enrollment_ccn')
+                field: ccn
+      - name: enrollment_id
+        description: "PECOS enrollment the owner is listed on."
+      - name: owner_org_name
+        description: "Matching owner name."
+      - name: role_code_owner
+        description: "34 = direct owner, 35 = indirect owner."
+      - name: pct_ownership
+        description: "Stated ownership percentage."
+      - name: system
+        description: "Parent system the pattern points to."
+      - name: cik
+        description: "SEC CIK of the parent system."
+
+  - name: int_hospital_system
+    description: "One row per hospital owned (directly or indirectly) by one of the four public chains."
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_enrollment_ccn')
+                field: ccn
+      - name: parent_system
+        description: "HCA Healthcare, Tenet Healthcare, Community Health Systems or Universal Health Services. NULL when owners match more than one."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('system_owner_patterns')
+                field: system
+      - name: parent_cik
+        description: "SEC CIK of the parent system."
+      - name: system_conflict
+        description: "True when the hospital's owners match more than one system."
+      - name: systems_matched
+        description: "Every system matched, separated by ' | '."
+      - name: parent_max_pct_ownership
+        description: "Largest stated stake held by a matching owner. Joint ventures show under 100."
+      - name: matched_owner_names
+        description: "Owner names that matched, separated by ' | '."

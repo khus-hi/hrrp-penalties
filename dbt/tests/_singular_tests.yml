@@ -1,0 +1,21 @@
+version: 2
+
+# Descriptions for the singular tests; python -m models.build prints them in
+# docs/data_quality_report.md next to each result.
+data_tests:
+  - name: assert_factor_recompute_matches_cms
+    description: "recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS within 0.0001 for every hospital"
+  - name: assert_join_funnel_is_consistent
+    description: "join funnel has 7 steps, starts at every HRRP hospital, never grows, ends at the complete rows of mart.hospital"
+  - name: assert_supplemental_factor_equals_table15
+    description: "supplemental factor equals Table 15 factor"
+  - name: assert_at_most_six_hrrp_rows_per_hospital
+    description: "every hospital has at most 6 HRRP rows"
+  - name: assert_condition_shares_sum_to_one
+    description: "condition shares sum to 1 for every penalized hospital"
+  - name: assert_condition_dollars_add_up
+    description: "condition dollars add up to hospital dollars"
+  - name: assert_penalty_at_most_3pct_of_base
+    description: "no penalty above 3% of the base"
+  - name: assert_unpenalized_have_zero_dollars
+    description: "unpenalized hospitals (factor = 1) have $0"
