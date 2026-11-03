@@ -40,6 +40,7 @@ MAX_BYTES = 1_000_000  # keep the checked-in fixtures under 1 MB
 DEFAULT_FIXTURE_DB = C.ROOT / "data" / "fixture.duckdb"
 CHAINS = ["HCA Healthcare", "Tenet Healthcare", "Community Health Systems", "Universal Health Services"]
 SEC_YEARS = 4  # the workbook uses the last 3 fiscal years; one more for safety
+PANEL_HOSPITALS = 30  # hospitals kept for every year of the FY2016-FY2027 panel tables
 
 # Same rules as models/staging/00_macros.sql, as TEMP macros so nothing is written to
 # your real database (it is attached read-only).
@@ -138,6 +139,20 @@ def table_filters(con, have: set[str]) -> dict[str, str]:
               AND TRY_CAST(fy AS INT) > (SELECT max(TRY_CAST(fy AS INT)) FROM src.raw.sec_facts) - {SEC_YEARS}""",
         "column_mapping_log": "SELECT * FROM src.raw.column_mapping_log",
     }
+    # Multi-year panel: every year of a smaller subset of the sampled hospitals (12 years
+    # of 50 hospitals would push the fixtures past 1 MB). Program years and file status
+    # are tiny and kept whole.
+    f["hrrp_supplemental_history"] = ("SELECT * FROM src.raw.hrrp_supplemental_history "
+                                      "WHERE fx_ccn(source_ccn) IN (SELECT ccn FROM panel_s)")
+    if "hrrp_hospital_history" in have:
+        cols = {r[0] for r in con.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_catalog = 'src' "
+            "AND table_schema = 'raw' AND table_name = 'hrrp_hospital_history'").fetchall()}
+        ccn_cols = [c for c in ("facility_id", "provider_number", "provider_id", "ccn", "hospital_ccn") if c in cols]
+        f["hrrp_hospital_history"] = (f"SELECT * FROM src.raw.hrrp_hospital_history WHERE fx_ccn(coalesce("
+                                      f"{', '.join(ccn_cols)})) IN (SELECT ccn FROM panel_s)")
+    f["hrrp_history_files"] = "SELECT * FROM src.raw.hrrp_history_files"
+    f["hrrp_program_years"] = "SELECT * FROM src.raw.hrrp_program_years"
     # The untouched IPPS sheets: find their CCN column from the mapping log.
     from ingest.load import norm
     for source in ("hrrp_supplemental", "hrrp_table15"):
@@ -173,6 +188,8 @@ def sample(db: Path, n: int, max_bytes: int) -> None:
         WHERE fx_ccn(g.facility_id) IN (SELECT ccn FROM s);
     """)
 
+    # The panel tables keep PANEL_HOSPITALS of the sample (stable md5 order).
+    con.execute(f"CREATE TEMP TABLE panel_s AS SELECT ccn FROM s ORDER BY md5(ccn) LIMIT {PANEL_HOSPITALS}")
     filters = table_filters(con, have)
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     for old in RAW_DIR.glob("*.csv"):
