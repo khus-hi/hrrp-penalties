@@ -10,8 +10,8 @@ methodology):
                            capped at 3%
     adjustment factor    = 1 - payment reduction            (so never below 0.97)
 
-The pipeline computes this in SQL (models/marts/mart_hospital_penalty.sql, checked in
-checks/05_penalty_checks.sql). This module is the same arithmetic in pandas so it can be
+The pipeline computes this in SQL (dbt/models/marts/mart_hospital_paf_recomputed.sql, checked by
+dbt/tests/assert_factor_recompute_matches_cms.sql). This module is the same arithmetic in pandas so it can be
 unit-tested, and analysis/check_factor.py confirms the two agree on the live data.
 """
 import numpy as np
