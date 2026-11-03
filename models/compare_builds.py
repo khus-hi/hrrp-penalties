@@ -3,7 +3,8 @@
 Every table in the stg, int, mart, qa and seed schemas of BEFORE is compared with the
 same table in AFTER: row count, columns, and rows that are in one but not the other
 (EXCEPT ALL in both directions, so duplicate rows count too). Doubles are compared
-after rounding to 6 decimal places (a millionth of a dollar or of a ratio). DuckDB adds
+after rounding to 6 decimal places (a millionth of a dollar or of a ratio), and text lists joined with ' | ' or ', '
+are compared as sorted lists. DuckDB adds
 up numbers in parallel, so two runs of the same SQL can differ in the last binary digit
 (about $0.00000000001); that noise is not a real difference, anything bigger is.
 
@@ -42,7 +43,15 @@ def select_list(cols):
     out = []
     for name, dtype in cols:
         q = f'"{name}"'
-        out.append(f"round({q}, 6) AS {q}" if dtype in ("DOUBLE", "FLOAT", "REAL") else q)
+        if dtype in ("DOUBLE", "FLOAT", "REAL"):
+            out.append(f"round({q}, 6) AS {q}")
+        elif dtype == "VARCHAR":
+            # Text lists joined with ' | ' or ', ' (e.g. int.hospital_system.matched_owner_names,
+            # qa.suppressed_values.footnote_codes_seen) were built without ORDER BY before dbt,
+            # so their order was arbitrary: compare them as sorted lists.
+            out.append(f"array_to_string(list_sort(regexp_split_to_array({q}, ' \\| |, ')), '|') AS {q}")
+        else:
+            out.append(q)
     return ", ".join(out)
 
 
