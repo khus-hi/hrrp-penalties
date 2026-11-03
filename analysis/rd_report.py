@@ -454,7 +454,7 @@ def main():
     res = run(panel, hosp)
     if "pooled" not in res:
         sys.exit(f"No FY t / FY t+{MAIN_H} pairs with FY t >= {rd.FIRST_PEER_MEDIAN_YEAR} in {PANEL} "
-                 f"(years loaded: {sorted(panel['fiscal_year'].unique())}). Load the multi-year panel first "
+                 f"(years loaded: {sorted(int(y) for y in panel['fiscal_year'].unique())}). Load the multi-year panel first "
                  "(panel/mac_steps_multiyear_panel.md). Nothing written.")
     fig_dir = FIG_DIR if real else report.parent / "figures" / "rd"
     out_dir = OUT_DIR if real else report.parent
