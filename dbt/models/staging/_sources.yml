@@ -1,0 +1,48 @@
+version: 2
+
+# The raw schema is written by `python -m ingest.load`: every file in data/raw/,
+# loaded as text, column names in snake_case, plus a _loaded_at timestamp per table.
+# Freshness: CMS refreshes its provider data quarterly and the HRRP payment files once
+# a year with the IPPS final rule, so a load older than ~3 months gets a warning and
+# one older than a year is an error. Run it with `dbt source freshness`.
+sources:
+  - name: raw
+    schema: raw
+    description: "Official files exactly as published (CMS, Census, SEC), loaded as text by ingest/load.py."
+    config:
+      loaded_at_field: _loaded_at
+      freshness:
+        warn_after: {count: 100, period: day}
+        error_after: {count: 400, period: day}
+    tables:
+      - name: hrrp_hospital
+        description: >
+          CMS FY2026 Hospital Readmissions Reduction Program hospital file (Provider Data
+          Catalog dataset 9n3s-kdb3). One row per hospital x condition, performance period
+          07/01/2021-06/30/2024. Suppressed values are text such as "N/A" or "Too Few to Report".
+      - name: hospital_general_info
+        description: "CMS Hospital General Information (dataset xubh-q36u): name, address, county, type, ownership, star rating."
+      - name: hrrp_supplemental
+        description: >
+          FY2026 IPPS final rule HRRP supplemental data file: CMS's payment adjustment factor
+          and every input used to compute it (ERR, peer-group median ERR, DRG payment ratio,
+          penalty indicator per condition, dual proportion, peer group, neutrality modifier).
+          Columns were matched by pattern; see column_mapping_log.
+      - name: hrrp_table15
+        description: "FY2026 IPPS final rule Table 15 (HRRP payment adjustment factors). Used only to cross-check the supplemental file."
+      - name: hospital_cost_report
+        description: "CMS Hospital Provider Cost Report (HCRIS) flat file: beds, residents, Medicare DRG payments, revenue."
+      - name: hospital_enrollments
+        description: "CMS Hospital Enrollments (PECOS). Bridges ENROLLMENT ID to CCN; one enrollment can list several CCNs joined by '|'."
+      - name: hospital_all_owners
+        description: "CMS Hospital All Owners: every direct and indirect owner of each enrollment. Has no CCN of its own."
+      - name: zcta_county_rel
+        description: "Census 2020 ZCTA-to-county relationship file. Used as the ZIP fallback for county FIPS."
+      - name: acs_county
+        description: "Census ACS 2020-2024 5-year estimates by county (population, median age, median household income, 65+ by sex)."
+      - name: sec_facts
+        description: "SEC EDGAR XBRL companyfacts for HCA (CIK 860730), Tenet (70318), UHS (352915) and CHS (1108109), flattened."
+      - name: column_mapping_log
+        description: "Which spreadsheet column ingest/load.py matched to each field of the IPPS files (NULL = not found, left empty)."
+        config:
+          freshness: null

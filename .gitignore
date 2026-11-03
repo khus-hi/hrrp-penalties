@@ -11,3 +11,9 @@ __pycache__/
 build/
 .pytest_cache/
 .ruff_cache/
+# dbt build output and logs
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+logs/

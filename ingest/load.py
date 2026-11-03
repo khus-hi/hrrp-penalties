@@ -59,7 +59,8 @@ def load_df(con, table, df):
     df.columns = [norm(c) for c in df.columns]
     df = df.astype("string")
     con.register("_df", df)
-    con.execute(f"CREATE OR REPLACE TABLE {table} AS SELECT * FROM _df")
+    # _loaded_at lets dbt check how old each raw table is (`dbt source freshness`).
+    con.execute(f"CREATE OR REPLACE TABLE {table} AS SELECT *, current_timestamp AS _loaded_at FROM _df")
     con.unregister("_df")
     print(f"  {table:45s} {len(df):>9,} rows  {len(df.columns)} cols")
 
@@ -186,7 +187,7 @@ def load_acs(con):
 def main():
     C.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(C.DB_PATH))
-    con.execute("CREATE SCHEMA IF NOT EXISTS raw; CREATE SCHEMA IF NOT EXISTS seed;")
+    con.execute("CREATE SCHEMA IF NOT EXISTS raw;")
     con.execute("CREATE OR REPLACE TABLE raw.column_mapping_log "
                 "(source VARCHAR, field VARCHAR, matched_column VARCHAR, all_candidates VARCHAR)")
     print("Loading raw tables:")
@@ -206,8 +207,7 @@ def main():
     load_sec(con)
     load_acs(con)
 
-    for seed in sorted((C.ROOT / "seeds").glob("*.csv")):
-        load_df(con, f"seed.{seed.stem}", read_csv_text(seed))
+    # The seeds/ CSVs are loaded by `dbt seed` (part of `python -m models.build`).
 
     print("\nColumn mapping for the IPPS spreadsheets (NULL = not found, left empty):")
     for r in con.execute("SELECT source, field, matched_column FROM raw.column_mapping_log").fetchall():
