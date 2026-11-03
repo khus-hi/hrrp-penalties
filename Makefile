@@ -48,4 +48,4 @@ schema-check:  ## Fail if a source file changed and its columns changed too (see
 	$(PYTHON) -m ingest.schema_check
 
 ci: lint test fixture-db  ## What GitHub Actions CI runs: lint, tests, then the models on the fixture DB
-	HRRP_DB_PATH=$(CURDIR)/data/fixture.duckdb $(PYTHON) -m models.build
+	HRRP_DB_PATH=$(CURDIR)/data/fixture.duckdb KEEP_REPORT=1 bash .github/scripts/build_models.sh
