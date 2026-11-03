@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build analysis workbook tableau test lint all
+.PHONY: help install ingest build analysis workbook tableau test lint all fixtures fixture-db ci schema-check
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -37,3 +37,15 @@ lint:  ## Ruff lint
 	$(PYTHON) -m ruff check .
 
 all: ingest build analysis test  ## Whole pipeline, then tests (leaves the workbook and Tableau CSVs alone)
+
+fixtures:  ## Cut ~50 real hospitals from data/hrrp.duckdb into tests/fixtures/ (run after ingest)
+	$(PYTHON) -m ingest.fixtures sample
+
+fixture-db:  ## Build data/fixture.duckdb from tests/fixtures/raw/*.csv
+	$(PYTHON) -m ingest.fixtures build --db data/fixture.duckdb
+
+schema-check:  ## Fail if a source file changed and its columns changed too (see ingest/schema_lock.json)
+	$(PYTHON) -m ingest.schema_check
+
+ci: lint test fixture-db  ## What GitHub Actions CI runs: lint, tests, then the models on the fixture DB
+	HRRP_DB_PATH=$(CURDIR)/data/fixture.duckdb $(PYTHON) -m models.build
