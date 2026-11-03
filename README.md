@@ -7,8 +7,6 @@
 ![Tableau dashboard: national map of estimated HRRP penalties](docs/figures/dashboard.png)
 <!-- Screenshot placeholder: save a screenshot of the "1. National" dashboard as docs/figures/dashboard.png -->
 
-**Live dashboards (Tableau Public):** [National](https://public.tableau.com/views/1_National/1_National) · [Hospital lookup](https://public.tableau.com/views/2_HospitalLookup/2_HospitalLookup) · [Conditions](https://public.tableau.com/views/3_Conditions/3_Conditions) · [Massachusetts](https://public.tableau.com/views/4_Massachusetts/4_Massachusetts) · [Parent systems](https://public.tableau.com/views/5_ParentSystems/5_ParentSystems)
-
 ## Key findings (FY2026)
 
 1. **HRRP will cut an estimated $315.6M from hospital payments, and pneumonia and heart failure drive more than half of it.** 2,302 of the 2,937 hospitals with a CMS factor (78.4%) are penalized. Pneumonia is 32.7% of the dollars and heart failure 22.9%. Massachusetts has the highest rate of any state, at 0.75% of Medicare base payments. My recomputed factor matches CMS's published factor for all 2,945 hospitals in its file. ([penalty report](docs/penalty_report.md))
