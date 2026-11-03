@@ -41,5 +41,11 @@ python -m models.build     ->  stg.* -> int.* -> mart.hospital, qa.*  + docs/dat
 - **Nonlinearity:** a cross-validated gradient-boosted tree, compared with the linear model.
 - **Output:** `docs/err_model_report.md`, which includes plain-English coefficients, the assumption checks and the causality caveats.
 
+## 7. Tests (`hrrp/`, `tests/`, `make test`)
+- **What:** the calculations the scripts depend on live in the `hrrp` package as plain functions: the CMS payment adjustment factor (`hrrp/penalty.py`), the discharge-weighted composite ERR and the 0-1 vs 0-100 percent fix (`hrrp/err.py`), and the Shapley R² split (`hrrp/shapley.py`). `pytest` tests them on small hand-typed tables, so no download is needed.
+- **The factor test** is a worked example: one hospital's inputs exactly as CMS published them in the FY2026 supplemental file, worked through the 42 CFR 412.152/412.154 steps by hand, landing on CMS's published factor.
+- **Python vs SQL:** the SQL still builds every table. `python -m analysis.check_factor` recomputes the factor in Python for every hospital and checks it against both the SQL and CMS.
+- **Run it:** `make test` (unit tests) or `make all` (whole pipeline, then tests). `make help` lists every target.
+
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
