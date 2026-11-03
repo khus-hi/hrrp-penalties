@@ -30,3 +30,26 @@ seeds:
         data_tests: [unique, not_null]
       - name: note
         description: "Why the pattern is there."
+  - name: hrrp_known_breaks
+    description: >
+      Breaks in the HRRP series that CMS announced, each with the CMS (or CMS contractor)
+      page and the sentence that says so. Read by the panel to flag rows, and checked
+      against the data by assert_panel_known_breaks_consistent and
+      assert_panel_covid_years_match_periods.
+    columns:
+      - name: fiscal_year
+        description: "Payment year the break applies to."
+        data_tests: [not_null]
+      - name: condition
+        description: "Condition code, or empty if it applies to the whole year."
+      - name: break_type
+        description: "Kind of break."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["not_in_program", "methodology_change", "covid_2020_exclusion", "measure_suppressed", "period_length_change"]
+      - name: source_url
+        description: "CMS page the break was read from."
+        data_tests: [not_null]
+      - name: source_quote
+        description: "The sentence on that page."

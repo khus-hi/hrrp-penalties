@@ -39,6 +39,9 @@ seeds:
       +column_types: {state_abbr: varchar, state_fips: varchar}
     system_owner_patterns:
       +column_types: {system: varchar, cik: varchar, owner_name_pattern: varchar, note: varchar}
+    hrrp_known_breaks:
+      +column_types: {fiscal_year: integer, condition: varchar, break_type: varchar, description: varchar,
+                      source_url: varchar, source_quote: varchar}
 
 data_tests:
   hrrp:
@@ -50,3 +53,10 @@ data_tests:
     # Keep the failing rows of every test in qa_failures.<test name> for debugging.
     +store_failures: true
     +schema: qa_failures
+
+vars:
+  # Current HRRP payment year (ingest/config.py PROGRAM_YEAR).
+  program_year: 2026
+  # assert_panel_peer_median_matches_cms only checks peer groups at least this big, so
+  # the 50-hospital CI fixture (where a recomputed median can't match) is skipped.
+  panel_peer_median_min_hospitals: 100

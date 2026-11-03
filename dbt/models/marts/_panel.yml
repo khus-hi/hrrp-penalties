@@ -1,0 +1,89 @@
+version: 2
+
+models:
+  - name: fct_hospital_condition_year
+    description: >
+      The multi-year HRRP panel (built as mart.fct_hospital_condition_year): one row per
+      hospital (CCN) x condition x payment year FY2016-FY2027, from CMS's IPPS final rule
+      supplemental files, with the Provider Data Catalog file of the year where loaded.
+      Only real CMS values; a year CMS no longer publishes is absent (see
+      qa.panel_year_coverage), never filled in. Known breaks (COVID-19 2020 exclusion,
+      FY2023 pneumonia suppression, FY2019 peer groups, FY2027 2-year period) are flagged.
+    columns:
+      - name: ccn
+        description: "{{ doc('ccn') }}"
+        data_tests: [not_null]
+      - name: fiscal_year
+        description: "HRRP payment year (federal fiscal year, October 1 of the year before to September 30)."
+        data_tests:
+          - not_null
+          - expression_is_true:
+              arguments:
+                expression: "between 2016 and 2027"
+      - name: condition
+        description: "{{ doc('condition') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ami", "hf", "pn", "copd", "cabg", "tha_tka"]
+      - name: err
+        description: "Excess readmission ratio (predicted / expected readmissions). NULL when CMS reports none (fewer than 25 cases, or not reported)."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "between 0.5 and 2"
+      - name: err_source
+        description: "'supplemental' (IPPS payment file) or 'pdc' (Provider Data Catalog file, rounded to 4 decimals)."
+      - name: peer_group
+        description: "CMS dual-proportion peer group, quintile 1 (fewest dual-eligible patients) to 5. FY2019+ only; NULL before."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: peer_median_err
+        description: "Median ERR of the hospital's peer group for this condition and year, as published by CMS (FY2019+)."
+      - name: eligible_discharges
+        description: "Number of eligible discharges CMS counted for this condition (supplemental file; PDC file number of discharges only for rows not in the supplemental file)."
+      - name: drg_payment_ratio
+        description: "Condition's share of the hospital's base DRG payments (supplemental file)."
+      - name: penalty_indicator
+        description: "CMS's own Y/N penalty indicator for the condition, where the file has one."
+      - name: penalized_condition
+        description: >
+          TRUE if the condition counted toward the hospital's penalty that year: CMS's
+          indicator when present, otherwise CMS's rule (ERR > peer median from FY2019,
+          ERR > 1 before). NULL when there is no ERR or CMS suppressed the measure.
+      - name: penalized_source
+        description: "How penalized_condition was decided: cms_indicator, err_vs_peer_median, err_vs_1, no_err or suppressed."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["cms_indicator", "err_vs_peer_median", "err_vs_1", "no_err", "suppressed"]
+      - name: payment_adjustment_factor
+        description: "CMS's HRRP payment adjustment factor for the hospital that year (1 = no penalty, 0.97 = 3% cap)."
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "between 0.97 and 1.0"
+      - name: dual_proportion
+        description: "Share of the hospital's Medicare stays that were dual-eligible (FY2019+), used for the peer group."
+      - name: perf_start
+        description: "First day of the performance period (discharges measured)."
+        data_tests: [not_null]
+      - name: perf_end
+        description: "Last day of the performance period."
+        data_tests: [not_null]
+      - name: perf_period_source
+        description: "'file' (Start/End Date in CMS's PDC file) or 'config:<cms|rule|file>' (ingest/config.py HRRP_YEARS)."
+      - name: covid_2020_excluded
+        description: "TRUE for FY2022-FY2024, whose periods leave out January-June 2020 (COVID-19). Comparisons across these years have a gap in the data."
+      - name: measure_suppressed
+        description: "TRUE where CMS suppressed the measure from payment (FY2023 pneumonia). The ERR is kept, but it did not count."
+      - name: break_notes
+        description: "Every known break that applies to the row, from seeds/hrrp_known_breaks.csv."
+      - name: in_supplemental
+        description: "Row came from the IPPS supplemental file."
+      - name: in_pdc
+        description: "Row also (or only) appears in that year's Provider Data Catalog file."

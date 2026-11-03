@@ -19,3 +19,18 @@ data_tests:
     description: "no penalty above 3% of the base"
   - name: assert_unpenalized_have_zero_dollars
     description: "unpenalized hospitals (factor = 1) have $0"
+  # Multi-year panel (mart.fct_hospital_condition_year)
+  - name: assert_panel_one_row_per_ccn_condition_year
+    description: "panel has one row per CCN x condition x fiscal year"
+  - name: assert_panel_peer_median_matches_cms
+    description: "peer-group median ERR recomputed from the panel matches CMS's published median within 1e-6 (FY2019+, groups with 100+ hospitals)"
+  - name: assert_panel_peer_median_constant_in_group
+    description: "CMS's published peer median is one value per year x condition x peer group"
+  - name: assert_panel_period_matches_file
+    description: "config performance periods match the Start/End Date in CMS's file for every year we have it"
+  - name: assert_panel_known_breaks_consistent
+    description: "suppressed measures in the seed have no penalty indicator Y, and every measure that looks suppressed is in the seed"
+  - name: assert_panel_covid_years_match_periods
+    description: "COVID-2020 exclusion years in the seed are exactly the years whose period reaches Dec 2019 - Jun 2020"
+  - name: assert_panel_matches_current_year_pipeline
+    description: "panel's current-year rows equal what the single-year pipeline reads from the same CMS file"
