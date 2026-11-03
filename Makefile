@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build docs analysis workbook tableau test lint all fixtures fixture-db ci schema-check
+.PHONY: help install ingest build docs analysis panel workbook tableau test lint all fixtures fixture-db ci schema-check
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'

@@ -1,0 +1,13 @@
+fiscal_year,status,source_file,rows,columns,note
+2016,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2017,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2018,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2019,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2020,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2021,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2022,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2023,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2024,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2025,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest
+2026,loaded,FY2026 supplemental rows (CI fixture: tests/fixtures/raw/hrrp_supplemental_original.csv),44,36,
+2027,missing,,,,not in the CI fixture yet: re-run make fixtures after the multi-year ingest

@@ -38,6 +38,18 @@ data always gives the same sample. Each table is then cut to what those hospital
 their enrollments and owners, their ZIPs and counties, and SEC facts only for the XBRL
 tags and recent fiscal years the workbook reads.
 
+## Multi-year panel tables
+
+`raw/hrrp_supplemental_history.csv`, `hrrp_hospital_history.csv`, `hrrp_history_files.csv`
+and `hrrp_program_years.csv` feed the FY2016-FY2027 panel. `sample` keeps every year for 30
+of the sampled hospitals (12 years of all 50 would pass 1 MB).
+
+**Until the next `make fixtures` they hold FY2026 only:** the same real FY2026 rows that
+were already in `hrrp_supplemental_original.csv` and `hrrp_hospital.csv`, restacked by
+`ingest.load`'s own functions, and the other years are marked `missing` with the note
+"not in the CI fixture yet". After you run the multi-year ingest on your laptop, re-cut
+the fixtures (`make fixtures`) so CI checks the cross-year harmonising on real old files too.
+
 ## How CI uses them
 
 ```bash
