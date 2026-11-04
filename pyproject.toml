@@ -24,6 +24,7 @@ dependencies = [
     "matplotlib>=3.8",
     "rdrobust>=2.1",   # regression discontinuity (hrrp/causal/rd.py); GPL-3, free on PyPI
     "rddensity>=2.4",  # density (manipulation) test at the RD cutoff
+    "pyfixest>=0.30",  # fixed-effects regressions for the Cures Act event study (hrrp/causal/did.py); MIT, free on PyPI
 ]
 
 [project.optional-dependencies]

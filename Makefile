@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build docs analysis panel rd workbook tableau test lint all fixtures fixture-db ci schema-check
+.PHONY: help install ingest build docs analysis panel rd did workbook tableau test lint all fixtures fixture-db ci schema-check
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -33,6 +33,9 @@ panel:  ## FY2016-FY2027 panel report only (docs/panel_report.md), after make bu
 
 rd:  ## Penalty -> later readmissions regression discontinuity (docs/rd_report.md), after the panel is built
 	$(PYTHON) -m analysis.rd_report
+
+did:  ## Cures Act peer-group reform event study (docs/did_report.md), after make build (and make rd for the comparison)
+	$(PYTHON) -m analysis.did_report
 
 workbook:  ## Rebuild the Excel workbook (overwrites analysis/output/hrrp_chain_workbook.xlsx)
 	$(PYTHON) -m analysis.build_workbook
