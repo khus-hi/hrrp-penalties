@@ -73,3 +73,17 @@ def test_pick_sheet_on_real_fy2026_rows(tmp_path):
     assert ccn_col == "Hospital CCN"
     assert len(sheet) == len(df)
     assert "ERR for AMI" in sheet.columns
+
+
+def test_years_named_in_cms_file_names():
+    # Real names from CMS's zips (FY2016, FY2019, FY2026, and the FY2024 file that the
+    # FY2023 archive link served).
+    assert L.years_named("FY 2016 IPPS Final Rule Readmissions PUF revised 08-04-15.xlsx:Final Rule FY 2016") == {2016}
+    assert L.years_named("fy_2019_ipps_final_rule_hrrp_supplemental_file.xlsx:FR FY 2019") == {2019}
+    assert L.years_named("FY2026_HRRP_Supplemental_File.xlsx:FR FY 2026") == {2026}
+    assert L.years_named("FY2024_Final_Rule_Supplemental_File.xlsx:FR FY 2024") == {2024}
+    assert L.years_named("Supplemental.xlsx:Sheet1") == set()
+
+
+def test_fy2023_does_not_use_the_link_that_serves_fy2024():
+    assert not any(u.endswith(".zip-0") for u in C.HRRP_YEARS[2023]["supplemental_urls"])

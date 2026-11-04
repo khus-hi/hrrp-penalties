@@ -1,0 +1,5 @@
+meets_min,side,rows,penalized,share_penalized
+False,above median,6439,0,0.0
+False,at or below median,6842,0,0.0
+True,above median,38583,38583,1.0
+True,at or below median,38180,0,0.0

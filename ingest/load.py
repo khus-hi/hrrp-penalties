@@ -225,6 +225,11 @@ def _unique_norm(cols) -> list[str]:
     return out
 
 
+def years_named(label: str) -> set[int]:
+    """Four-digit fiscal years a CMS file or sheet name states ("FY 2024", "FY2024", "fy_2019")."""
+    return {int(y) for y in re.findall(r"(?i)\bfy[\s_-]?(20\d\d)", label)}
+
+
 def load_hrrp_history(con):
     """Every year's supplemental sheet, stacked into raw.hrrp_supplemental_history.
 
@@ -249,6 +254,15 @@ def load_hrrp_history(con):
             print(f"  hrrp history FY{fy}: MISSING ({why[:80]})")
             continue
         label, df, ccn_col = picked
+        named = years_named(label)
+        if named and fy not in named:
+            # A CMS link can serve another year's file (FY2023's archive link served FY2024's).
+            # Loading it would duplicate that year under the wrong label, so treat it as missing.
+            why = (f"wrong year: {label} names FY{', FY'.join(map(str, sorted(named)))}. Delete "
+                   f"data/raw/hrrp_history/fy{fy}/ and download again (see ingest/config.py HRRP_YEARS)")
+            files.append((fy, "missing", label, None, None, why))
+            print(f"  hrrp history FY{fy}: WRONG YEAR, not loaded ({why})")
+            continue
         out = df.copy()
         out.columns = _unique_norm(df.columns)
         out.insert(0, "source_ccn", df[ccn_col].to_numpy())

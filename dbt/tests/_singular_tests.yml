@@ -20,6 +20,8 @@ data_tests:
   - name: assert_unpenalized_have_zero_dollars
     description: "unpenalized hospitals (factor = 1) have $0"
   # Multi-year panel (mart.fct_hospital_condition_year)
+  - name: assert_panel_zero_err_means_few_cases
+    description: "pre-FY2019 rows with no ERR (CMS wrote 0) had fewer than 25 cases"
   - name: assert_panel_one_row_per_ccn_condition_year
     description: "panel has one row per CCN x condition x fiscal year"
   - name: assert_panel_peer_median_matches_cms
