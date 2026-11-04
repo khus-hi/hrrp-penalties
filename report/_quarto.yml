@@ -1,0 +1,24 @@
+# Quarto project for the written findings report.
+# Render with:  cd report && quarto render   (or: make report)
+# Output goes to report/_site/ (git-ignored); GitHub Actions publishes it to GitHub Pages.
+project:
+  type: default
+  output-dir: _site
+  render:
+    - hrrp.qmd
+
+execute:
+  echo: false
+  warning: false
+  freeze: false
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    fig-dpi: 150
+    code-fold: true
+    link-external-newwindow: true
