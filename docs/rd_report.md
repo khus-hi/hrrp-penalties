@@ -1,6 +1,6 @@
 # Does a readmission penalty lower that condition's later readmissions?
 
-_Generated 2026-11-03 20:27 UTC by `python -m analysis.rd_report` from `mart.fct_hospital_condition_year` (payment years up to FY2027). Do not edit by hand; every number below comes from that run._
+_Generated 2026-11-04 01:12 UTC by `python -m analysis.rd_report` from `mart.fct_hospital_condition_year` (payment years up to FY2027). Do not edit by hand; every number below comes from that run._
 
 ## Bottom line
 
@@ -128,10 +128,10 @@ Each row is an RD with a predetermined characteristic as the 'outcome': it shoul
 | For-profit (0/1) | -0.0034 |  | -0.0307 to 0.0224 | 0.760 | 0.0874 | 27,392 / 25,999 | 69,973 | 2,828 |
 | Government-owned (0/1) | +0.0053 |  | -0.0183 to 0.0314 | 0.605 | 0.0551 | 20,737 / 19,408 | 69,973 | 2,828 |
 | Teaching (0/1, residents > 0) | -0.0090 |  | -0.0507 to 0.0242 | 0.488 | 0.0464 | 18,237 / 17,173 | 70,092 | 2,836 |
-| Same condition's ERR in FY t-3 (pre-period) | +0.0022 |  | -0.0029 to 0.0090 | 0.316 | 0.0658 | 20,534 / 19,146 | 62,323 | 2,972 |
+| Same condition's ERR in FY t-3 (pre-period) | +0.0012 |  | -0.0023 to 0.0056 | 0.409 | 0.0496 | 19,266 / 18,013 | 69,907 | 2,973 |
 | Outcome observed in FY t+3 (attrition, 0/1) | +0.0055 |  | -0.0033 to 0.0153 | 0.206 | 0.0644 | 25,647 / 23,822 | 76,763 | 3,136 |
 
-Mean just below the cutoff (within h), for scale: Beds (cost report): 232; Dual-eligible share (CMS, FY t): 0.233; For-profit (0/1): 0.166; Government-owned (0/1): 0.144; Teaching (0/1, residents > 0): 0.494; Same condition's ERR in FY t-3 (pre-period): 0.985; Outcome observed in FY t+3 (attrition, 0/1): 0.928.
+Mean just below the cutoff (within h), for scale: Beds (cost report): 232; Dual-eligible share (CMS, FY t): 0.233; For-profit (0/1): 0.166; Government-owned (0/1): 0.144; Teaching (0/1, residents > 0): 0.494; Same condition's ERR in FY t-3 (pre-period): 0.993; Outcome observed in FY t+3 (attrition, 0/1): 0.928.
 
 ### Robustness: placebo cutoffs, donut, bandwidth, fuzzy on all rows
 

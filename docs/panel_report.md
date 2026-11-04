@@ -1,6 +1,6 @@
 # HRRP panel, FY2016-FY2027: coverage and attrition
 
-_Generated 2026-11-03 20:27 UTC by `python -m analysis.panel_report` from `mart.fct_hospital_condition_year`. Do not edit by hand._
+_Generated 2026-11-04 01:11 UTC by `python -m analysis.panel_report` from `mart.fct_hospital_condition_year`. Do not edit by hand._
 
 ## Years
 
@@ -10,9 +10,9 @@ No year is missing.
 
 | fy | status | hospitals | with_any_err | conditions | condition_list | period_start | period_end | period_checked | file_period_start | file_period_end | supplemental_note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 2016 | loaded | 3464 | 3464 | 4 | ami,hf,pn,tha_tka | 2011-07-01 | 2014-06-30 | rule |  |  |  |
-| 2017 | loaded | 3448 | 3448 | 4 | ami,cabg,hf,tha_tka | 2012-07-01 | 2015-06-30 | rule |  |  |  |
-| 2018 | loaded | 3414 | 3323 | 5 | ami,cabg,hf,pn,tha_tka | 2013-07-01 | 2016-06-30 | rule |  |  |  |
+| 2016 | loaded | 3464 | 3214 | 5 | ami,copd,hf,pn,tha_tka | 2011-07-01 | 2014-06-30 | rule |  |  |  |
+| 2017 | loaded | 3448 | 3096 | 6 | ami,cabg,copd,hf,pn,tha_tka | 2012-07-01 | 2015-06-30 | rule |  |  |  |
+| 2018 | loaded | 3414 | 3327 | 6 | ami,cabg,copd,hf,pn,tha_tka | 2013-07-01 | 2016-06-30 | rule |  |  |  |
 | 2019 | loaded | 3173 | 3173 | 6 | ami,cabg,copd,hf,pn,tha_tka | 2014-07-01 | 2017-06-30 | rule |  |  |  |
 | 2020 | loaded | 3130 | 3130 | 6 | ami,cabg,copd,hf,pn,tha_tka | 2015-07-01 | 2018-06-30 | rule |  |  |  |
 | 2021 | loaded | 3080 | 3080 | 6 | ami,cabg,copd,hf,pn,tha_tka | 2016-07-01 | 2019-06-30 | cms |  |  |  |
@@ -73,16 +73,20 @@ Of the hospitals in FY2016, how many are still in each later year:
 
 | fy | condition | hospital_rows | with_err | cms_indicator_y | penalized | median_err | suppressed_per_cms | looks_suppressed |
 |---|---|---|---|---|---|---|---|---|
-| 2016 | ami | 3464 | 3464 | 0 | 1069 | 0.9438 | False | False |
-| 2016 | hf | 3464 | 3464 | 0 | 1481 | 0.9846 | False | False |
-| 2016 | pn | 3464 | 3464 | 0 | 1477 | 0.9873 | False | False |
-| 2016 | tha_tka | 3464 | 3464 | 0 | 1243 | 0.9385 | False | False |
-| 2017 | ami | 3448 | 3448 | 0 | 1063 | 0.9491 | False | False |
-| 2017 | cabg | 3448 | 3448 | 0 | 496 | 0 | False | False |
-| 2017 | hf | 3448 | 3448 | 0 | 1410 | 0.981 | False | False |
-| 2017 | tha_tka | 3448 | 3448 | 0 | 1212 | 0.9379 | False | False |
+| 2016 | ami | 3464 | 2163 | 0 | 1069 | 0.9993 | False | False |
+| 2016 | copd | 3464 | 2974 | 0 | 1422 | 0.9966 | False | False |
+| 2016 | hf | 3464 | 3000 | 0 | 1481 | 0.9986 | False | False |
+| 2016 | pn | 3464 | 3053 | 0 | 1477 | 0.9973 | False | False |
+| 2016 | tha_tka | 3464 | 2519 | 0 | 1243 | 0.9981 | False | False |
+| 2017 | ami | 3448 | 2119 | 0 | 1063 | 1 | False | False |
+| 2017 | cabg | 3448 | 1024 | 0 | 496 | 0.9966 | False | False |
+| 2017 | copd | 3448 | 2870 | 0 | 1384 | 0.997 | False | False |
+| 2017 | hf | 3448 | 2876 | 0 | 1410 | 0.9979 | False | False |
+| 2017 | pn | 3448 | 2965 | 0 | 1432 | 0.9964 | False | False |
+| 2017 | tha_tka | 3448 | 2461 | 0 | 1212 | 0.9979 | False | False |
 | 2018 | ami | 3414 | 3027 | 0 | 1412 | 0.9975 | False | False |
 | 2018 | cabg | 3414 | 1163 | 0 | 564 | 0.9972 | False | False |
+| 2018 | copd | 3414 | 3179 | 0 | 1484 | 0.997 | False | False |
 | 2018 | hf | 3414 | 3160 | 0 | 1557 | 0.9992 | False | False |
 | 2018 | pn | 3414 | 3199 | 0 | 1524 | 0.9962 | False | False |
 | 2018 | tha_tka | 3414 | 2885 | 0 | 1326 | 0.9937 | False | False |

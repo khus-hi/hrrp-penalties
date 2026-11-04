@@ -1,6 +1,6 @@
 # Data-quality report
 
-_Generated 2026-11-03 20:27 UTC by `python -m models.build` (dbt build) from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
+_Generated 2026-11-04 01:11 UTC by `python -m models.build` (dbt build) from the files in data/raw/ (see data/raw/manifest.json for exact downloads)._
 
 ## Join funnel (cumulative)
 
@@ -110,28 +110,27 @@ Full list: `SELECT * FROM qa.unmatched_ccns`.
 
 | source | last_loaded_utc | age_days | result |
 |---|---|---|---|
-| acs_county | 2026-11-03 20:26 | 0 | pass |
-| hospital_all_owners | 2026-11-03 20:26 | 0 | pass |
-| hospital_cost_report | 2026-11-03 20:26 | 0 | pass |
-| hospital_enrollments | 2026-11-03 20:26 | 0 | pass |
-| hospital_general_info | 2026-11-03 20:26 | 0 | pass |
-| hrrp_hospital | 2026-11-03 20:26 | 0 | pass |
-| hrrp_hospital_history | 2026-11-03 20:26 | 0 | pass |
-| hrrp_supplemental | 2026-11-03 20:26 | 0 | pass |
-| hrrp_supplemental_history | 2026-11-03 20:26 | 0 | pass |
-| hrrp_table15 | 2026-11-03 20:26 | 0 | pass |
-| sec_facts | 2026-11-03 20:26 | 0 | pass |
-| zcta_county_rel | 2026-11-03 20:26 | 0 | pass |
+| acs_county | 2026-11-03 20:26 | 0.2 | pass |
+| hospital_all_owners | 2026-11-03 20:26 | 0.2 | pass |
+| hospital_cost_report | 2026-11-03 20:26 | 0.2 | pass |
+| hospital_enrollments | 2026-11-03 20:26 | 0.2 | pass |
+| hospital_general_info | 2026-11-03 20:26 | 0.2 | pass |
+| hrrp_hospital | 2026-11-03 20:26 | 0.2 | pass |
+| hrrp_hospital_history | 2026-11-03 20:26 | 0.2 | pass |
+| hrrp_supplemental | 2026-11-03 20:26 | 0.2 | pass |
+| hrrp_supplemental_history | 2026-11-03 20:26 | 0.2 | pass |
+| hrrp_table15 | 2026-11-03 20:26 | 0.2 | pass |
+| sec_facts | 2026-11-03 20:26 | 0.2 | pass |
+| zcta_county_rel | 2026-11-03 20:26 | 0.2 | pass |
 
 
-## Assertions: dbt tests (0 failing, 1 warnings, 100 tests)
+## Assertions: dbt tests (0 failing, 1 warnings, 101 tests)
 
 Generic tests are defined next to each column in `dbt/models/*/_*.yml`; singular tests are `dbt/tests/*.sql`. Each test's dbt name is in `qa.assertions.dbt_test`; its failing rows are kept in the `qa_failures` schema (`cd dbt && dbt test --select <dbt_test>` re-runs one).
 
 | test | models | failing_rows | result |
 |---|---|---|---|
-| fct_hospital_condition_year.err between 0.5 and 2 | fct_hospital_condition_year | 8437 | WARN |
-| CMS's published peer median is one value per year x condition x peer group | fct_hospital_condition_year | 0 | pass |
+| fct_hospital_condition_year.err between 0.5 and 2 | fct_hospital_condition_year | 4 | WARN |
 | COVID-2020 exclusion years in the seed are exactly the years whose period reaches Dec 2019 - Jun 2020 | hrrp_known_breaks, stg_hrrp_program_years | 0 | pass |
 | accepted_values: fct_hospital_condition_year.condition in 6 listed values | fct_hospital_condition_year | 0 | pass |
 | accepted_values: fct_hospital_condition_year.peer_group in 5 listed values | fct_hospital_condition_year | 0 | pass |
@@ -145,9 +144,14 @@ Generic tests are defined next to each column in `dbt/models/*/_*.yml`; singular
 | accepted_values: stg_hrrp_measures.condition in 6 listed values | stg_hrrp_measures | 0 | pass |
 | accepted_values: stg_hrrp_program_years.period_checked in 3 listed values | stg_hrrp_program_years | 0 | pass |
 | accepted_values: system_owner_patterns.system in 4 listed values | system_owner_patterns | 0 | pass |
+| assert_panel_known_breaks_consistent | qa_panel_measure_coverage | 0 | pass |
+| assert_panel_matches_current_year_pipeline | fct_hospital_condition_year, stg_hrrp_supplemental | 0 | pass |
+| assert_panel_one_row_per_ccn_condition_year | fct_hospital_condition_year | 0 | pass |
+| assert_panel_peer_median_constant_in_group | fct_hospital_condition_year | 0 | pass |
+| assert_panel_peer_median_matches_cms | fct_hospital_condition_year | 0 | pass |
+| assert_panel_period_matches_file | qa_panel_year_coverage | 0 | pass |
 | condition dollars add up to hospital dollars | mart_hospital_condition_penalty, mart_hospital_penalty | 0 | pass |
 | condition shares sum to 1 for every penalized hospital | mart_hospital_condition_penalty_share, stg_hrrp_supplemental | 0 | pass |
-| config performance periods match the Start/End Date in CMS's file for every year we have it | qa_panel_year_coverage | 0 | pass |
 | every hospital has at most 6 HRRP rows | stg_hrrp_measures | 0 | pass |
 | fct_hospital_condition_year.fiscal_year between 2016 and 2027 | fct_hospital_condition_year | 0 | pass |
 | fct_hospital_condition_year.payment_adjustment_factor between 0.97 and 1.0 | fct_hospital_condition_year | 0 | pass |
@@ -192,9 +196,7 @@ Generic tests are defined next to each column in `dbt/models/*/_*.yml`; singular
 | not_null: stg_hrrp_table15.ccn | stg_hrrp_table15 | 0 | pass |
 | not_null: system_owner_patterns.owner_name_pattern | system_owner_patterns | 0 | pass |
 | not_null: system_owner_patterns.system | system_owner_patterns | 0 | pass |
-| panel has one row per CCN x condition x fiscal year | fct_hospital_condition_year | 0 | pass |
-| panel's current-year rows equal what the single-year pipeline reads from the same CMS file | fct_hospital_condition_year, stg_hrrp_supplemental | 0 | pass |
-| peer-group median ERR recomputed from the panel matches CMS's published median within 1e-6 (FY2019+, groups with 100+ hospitals) | fct_hospital_condition_year | 0 | pass |
+| pre-FY2019 rows with no ERR (CMS wrote 0) had fewer than 25 cases | fct_hospital_condition_year | 0 | pass |
 | qa_panel_column_map.competing_columns = 1 | qa_panel_column_map | 0 | pass |
 | recomputed factor (1 - NM x sum of ratio x excess ERR, floor 0.97) matches CMS within 0.0001 for every hospital | mart_hospital_paf_recomputed, stg_hrrp_supplemental | 0 | pass |
 | relationships: int_hospital_county.ccn -> stg_general_info.ccn | int_hospital_county, stg_general_info | 0 | pass |
@@ -212,7 +214,6 @@ Generic tests are defined next to each column in `dbt/models/*/_*.yml`; singular
 | stg_acs_county.median_household_income >= 0 | stg_acs_county | 0 | pass |
 | stg_hrrp_measures.err > 0 | stg_hrrp_measures | 0 | pass |
 | supplemental factor equals Table 15 factor | mart_hospital | 0 | pass |
-| suppressed measures in the seed have no penalty indicator Y, and every measure that looks suppressed is in the seed | qa_panel_measure_coverage | 0 | pass |
 | unique: int_hospital_county.ccn | int_hospital_county | 0 | pass |
 | unique: int_hospital_system.ccn | int_hospital_system | 0 | pass |
 | unique: mart_hospital.ccn | mart_hospital | 0 | pass |
