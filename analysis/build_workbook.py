@@ -89,6 +89,17 @@ def pick_sec(facts: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def load_intervals():
+    """{chain: (5th, 95th percentile)} from the Monte Carlo output, or None if not run yet."""
+    path = CFG.ROOT / "analysis" / "output" / "penalty_interval.csv"
+    if not path.exists():
+        print(f"No {path.name}: the interval cells stay blank (run python -m analysis.penalty_uncertainty first).")
+        return None
+    t = pd.read_csv(path)
+    t = t[t.level == "group"]
+    return {r.name: (float(r.p5_usd), float(r.p95_usd)) for r in t.itertuples(index=False)}
+
+
 # ---------------------------------------------------------------- sheet helpers
 def header(ws, row, cols, widths=None):
     for j, c in enumerate(cols, 1):
@@ -119,7 +130,7 @@ def blank(v):
 
 
 # ---------------------------------------------------------------- build
-def build(hosp, cond, sec):
+def build(hosp, cond, sec, intervals=None):
     wb = Workbook()
 
     # README -------------------------------------------------------------------------
@@ -134,6 +145,7 @@ def build(hosp, cond, sec):
         "Medicare cost reports (base DRG payments, latest report, annualised), CMS All Owners (parent system), SEC EDGAR companyfacts (10-K).",
         "Key caveats: penalty dollars use 2024-25 cost-report payments, not FY2026 actuals; chain mapping is today's ownership;",
         "SEC figures are company-wide (all hospitals, all payers); scenarios hold peer-group medians and the neutrality modifier fixed.",
+        "Uncertainty: Inputs rows 25-33 and Chain_Summary columns L-O give each chain's 90% Monte Carlo interval (docs/penalty_uncertainty.md).",
         "ROI cost inputs come from the Care Transitions Intervention trial (AHRQ); labelled CHOICE cells are assumptions to overwrite.",
     ]
     for i, t in enumerate(lines, 1):
@@ -188,6 +200,21 @@ def build(hosp, cond, sec):
     put(inp, "A22", "Average cost of a readmission, 2020, all payers ($)"); put(inp, "B22", 16300, USD)
     put(inp, "C22", "AHRQ HCUP Statistical Brief #304 (Nationwide Readmissions Database 2020; cost, not charges): "
                     "https://hcup-us.ahrq.gov/reports/statbriefs/sb304-readmissions-2016-2020.pdf . Reference only, not used in a formula.")
+
+    # Uncertainty: 90% Monte Carlo interval per chain (rows 25-33), from
+    # analysis/output/penalty_interval.csv (python -m analysis.penalty_uncertainty).
+    put(inp, "A25", "Uncertainty in the penalty $: 90% Monte Carlo interval", bold=True)
+    put(inp, "C25", "From docs/penalty_uncertainty.md: payment base (cost report vs CMS Impact File), DRG payment "
+                    "ratio drift and penalized hospitals with no base, 10,000 draws. Data, not inputs to edit.")
+    interval_rows = {}
+    for k, chain in enumerate(CHAINS):
+        r_lo, r_hi = 26 + 2 * k, 27 + 2 * k
+        lo, hi = (intervals or {}).get(chain, (None, None))
+        put(inp, f"A{r_lo}", f"{chain}: low (5th percentile)"); put(inp, f"B{r_lo}", lo, USD)
+        put(inp, f"A{r_hi}", f"{chain}: high (95th percentile)"); put(inp, f"B{r_hi}", hi, USD)
+        if lo is None:
+            put(inp, f"C{r_lo}", "Not available: run python -m analysis.penalty_uncertainty, then rebuild the workbook.")
+        interval_rows[chain] = (r_lo, r_hi)
 
     S1, S2, S3, SR = "Inputs!$B$3", "Inputs!$B$4", "Inputs!$B$5", "Inputs!$B$10"
 
@@ -290,10 +317,24 @@ def build(hosp, cond, sec):
         put(cs, f"I{i}", f'=IF(ISNUMBER(G{i}),D{i}/G{i},"")', PCT3)
         put(cs, f"J{i}", f'=IF(ISNUMBER(F{i}),D{i}/F{i},"")', PCT3)
         put(cs, f"K{i}", f'=IF(ISNUMBER(H{i}),D{i}/H{i},"")', PCT3)
+    # 90% interval columns (appended so the columns above keep their letters)
+    for col, title in zip("LMNO", ["Penalty $: 90% interval low", "Penalty $: 90% interval high",
+                                    "Low as % of operating income", "High as % of operating income"]):
+        cell = cs.cell(1, " ABCDEFGHIJKLMNO".index(col), title)
+        cell.font, cell.fill = BOLD, HEAD_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="top")
+        cs.column_dimensions[col].width = 14 if col in "LM" else 12
+    for i, chain in enumerate(CHAINS, start=2):
+        r_lo, r_hi = interval_rows[chain]
+        put(cs, f"L{i}", f'=IF(ISNUMBER(Inputs!$B${r_lo}),Inputs!$B${r_lo},"")', USD)
+        put(cs, f"M{i}", f'=IF(ISNUMBER(Inputs!$B${r_hi}),Inputs!$B${r_hi},"")', USD)
+        put(cs, f"N{i}", f'=IF(AND(ISNUMBER(L{i}),ISNUMBER(G{i})),L{i}/G{i},"")', PCT3)
+        put(cs, f"O{i}", f'=IF(AND(ISNUMBER(M{i}),ISNUMBER(G{i})),M{i}/G{i},"")', PCT3)
     t = len(CHAINS) + 2
     put(cs, f"A{t}", "All four chains", bold=True)
     for col in "BCD":
         put(cs, f"{col}{t}", f"=SUM({col}2:{col}{t-1})", USD if col == "D" else None, bold=True)
+    put(cs, f"L{t+1}", "Chain intervals don't add: each chain's 5th/95th percentile comes from its own draws.")
 
     # 5-year history block
     top = t + 3
@@ -375,7 +416,7 @@ def main():
     hosp, cond, facts = load(con)
     con.close()
     sec = pick_sec(facts)
-    wb = build(hosp, cond, sec)
+    wb = build(hosp, cond, sec, load_intervals())
     OUT.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT)
     print(f"{len(hosp)} chain hospitals, {len(cond)} hospital-condition rows, {len(sec)} company-years")

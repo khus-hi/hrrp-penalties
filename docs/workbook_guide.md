@@ -23,6 +23,8 @@ Inputs ──► Condition_Data (one row per hospital × condition)
 | B13 | Fixed cost: 0 | CHOICE: the coach cost already includes salary, benefits and other expenses |
 | B14 | Margin per avoided readmission: 0 | CHOICE: the HRRP-penalty-only view. No public source gives a hospital's margin on a readmission. Row 22 shows HCUP's average readmission cost ($16,300 in 2020) for scale only |
 
+| B26:B33 | Each chain's 90% interval for its penalty $ (5th and 95th percentile) | Not an input to edit: placed from `analysis/output/penalty_interval.csv`, the Monte Carlo in [penalty_uncertainty.md](penalty_uncertainty.md). Blank until `python -m analysis.penalty_uncertainty` has run |
+
 Sources (Inputs rows 19-22): [AHRQ PSNet profile of the Care Transitions Intervention](https://psnet.ahrq.gov/innovation/transition-coachesr-reduce-readmissions-medicare-patients-complex-postdischarge-needs) (coach cost $74,310, about 300 patients a year); Coleman et al., *Arch Intern Med* 2006;166:1822-8 (30-day readmissions 11.9% control vs 8.3% intervention, n = 750); [HCUP Statistical Brief #304](https://hcup-us.ahrq.gov/reports/statbriefs/sb304-readmissions-2016-2020.pdf). The trial costs are in study-era dollars and are not inflated.
 
 ## Condition_Data: the CMS formula, one condition at a time
@@ -72,6 +74,10 @@ Values come straight from SEC companyfacts: the latest-filed 10-K value for each
 | E | `MAXIFS(fiscal year, company = chain)` | Latest 10-K year available |
 | F–H | `INDEX/MATCH` on company **and** year | Revenue, operating income and net income for that year |
 | I–K | `penalty / F,G,H` | Penalty as a share of each measure |
+| L–M | `= Inputs!B26..B33` | 90% interval for the chain's penalty $ (column D is the point estimate inside it) |
+| N–O | `L / G`, `M / G` | The interval as a share of operating income |
+
+The chain intervals don't add up to an "all four chains" interval, because each one is a percentile of that chain's own draws.
 
 The history block repeats the lookup for every year, plus operating margin (`operating income / revenue`), and compares the FY2026 penalty with each year's operating income.
 

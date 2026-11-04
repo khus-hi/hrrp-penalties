@@ -12,6 +12,7 @@ import re
 from datetime import datetime, timezone
 
 import duckdb
+import pandas as pd
 
 from ingest import config as C
 from models.build import md_table
@@ -46,6 +47,23 @@ def cms_rule_passages(window=700, limit=30):
     return diag, passages[:limit]
 
 
+INTERVALS = OUT / "penalty_interval.csv"
+
+
+def interval_block(level: str) -> str:
+    """90% Monte Carlo interval rows from analysis.penalty_uncertainty, as a markdown table."""
+    if not INTERVALS.exists():
+        return "_90% interval not computed yet: run `python -m analysis.penalty_uncertainty` before this report._"
+    t = pd.read_csv(INTERVALS)
+    t = t[t.level == level]
+    m = lambda v: f"${v / 1e6:,.1f}M"
+    rows = ["| | Point estimate | 90% interval (5th to 95th percentile) | Median of draws | Interval contains point |",
+            "|---|---|---|---|---|"]
+    rows += [f"| {r.name} | {m(r.point_estimate_usd)} | {m(r.p5_usd)} to {m(r.p95_usd)} | {m(r.p50_usd)} | "
+             f"{'yes' if r.interval_contains_point else '**no**'} |" for r in t.itertuples(index=False)]
+    return "\n".join(rows) + "\n\nHow the interval is built: [penalty_uncertainty.md](penalty_uncertainty.md)."
+
+
 def main():
     con = duckdb.connect(str(C.DB_PATH))
     con.execute((C.ROOT / "analysis" / "penalty_summaries.sql").read_text())
@@ -71,6 +89,7 @@ def main():
         "Method and assumptions: [penalty_method.md](penalty_method.md). "
         f"Data-quality assertions failing: {failed}._",
         "## National", md_table(con, "SELECT * FROM analysis.national"),
+        "### Uncertainty: 90% interval for the national total", interval_block("national"),
         "## Check against CMS",
         "### Counts in CMS's own FY2026 supplemental file", md_table(con, "SELECT * FROM analysis.cms_file_counts"),
         "### Does the formula reproduce CMS's factor?",
@@ -80,7 +99,9 @@ def main():
         "### What the FY2026 final rule says (verbatim text around HRRP mentions that include a $ amount or hospital count)",
         cms_block,
         "## By condition", md_table(con, "SELECT * FROM analysis.by_condition"),
+        "90% intervals by condition:", interval_block("condition"),
         "## By parent system", md_table(con, "SELECT * FROM analysis.by_system"),
+        "90% intervals by chain:", interval_block("group"),
         md_table(con, "SELECT * FROM analysis.by_system_condition WHERE parent_system <> 'Not one of the four chains'"),
         "## By ownership type", md_table(con, "SELECT * FROM analysis.by_ownership"),
         "## By state", md_table(con, "SELECT * FROM analysis.by_state"),

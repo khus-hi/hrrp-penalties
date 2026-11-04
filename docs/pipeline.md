@@ -37,6 +37,7 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 ## 5. Penalty estimate (`dbt/models/marts/mart_hospital_*.sql`, `analysis/`)
 - `mart.hospital_penalty`: (1 − factor) × annualised Medicare base DRG payments, with an `estimate_quality` flag on each row. `mart.hospital_condition_penalty` splits the dollars by condition using CMS's own inputs. The method is in [penalty_method.md](penalty_method.md).
 - `python -m analysis.penalty_report` writes the state, ownership, system, condition and Massachusetts tables to `docs/penalty_report.md` and `analysis/output/*.csv`. It also quotes the FY2026 final rule's own HRRP estimates for comparison.
+- `python -m analysis.penalty_uncertainty` (run first; `make analysis` does) cross-checks every hospital's cost-report base against the base implied by CMS's FY2026 IPPS Impact File (`raw.ipps_impact`), then runs a 10,000-draw Monte Carlo over the payment base, the DRG payment ratios and penalized hospitals with no base. It writes [penalty_uncertainty.md](penalty_uncertainty.md) and `analysis/output/penalty_interval.csv`; the penalty report and the chain workbook show those 90% intervals.
 
 ## 6. What explains readmission ratios (`analysis/err_model.py`)
 - **Outcome:** each hospital's composite ERR, weighted by CMS's eligible discharges.

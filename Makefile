@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build docs analysis panel rd did workbook tableau test lint all fixtures fixture-db ci schema-check
+.PHONY: help install ingest build docs analysis uncertainty panel rd did workbook tableau test lint all fixtures fixture-db ci schema-check
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -21,12 +21,16 @@ build:  ## dbt build: seeds, models and tests, then docs/data_quality_report.md
 docs:  ## Generate the dbt docs site (lineage graph, column descriptions) and serve it on localhost:8080
 	cd dbt && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs generate && HRRP_DB_PATH="$(CURDIR)/data/hrrp.duckdb" dbt docs serve
 
-analysis:  ## Penalty report, ERR model, open checks, factor check, and the FY2016-FY2027 panel report
+analysis:  ## Penalty interval + report, ERR model, open checks, factor check, and the FY2016-FY2027 panel report
+	$(PYTHON) -m analysis.penalty_uncertainty
 	$(PYTHON) -m analysis.penalty_report
 	$(PYTHON) -m analysis.err_model
 	$(PYTHON) -m analysis.open_checks
 	$(PYTHON) -m analysis.check_factor
 	$(PYTHON) -m analysis.panel_report
+
+uncertainty:  ## Impact File cross-check + Monte Carlo 90% interval (docs/penalty_uncertainty.md), after make build
+	$(PYTHON) -m analysis.penalty_uncertainty
 
 panel:  ## FY2016-FY2027 panel report only (docs/panel_report.md), after make build
 	$(PYTHON) -m analysis.panel_report

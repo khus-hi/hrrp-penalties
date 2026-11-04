@@ -23,3 +23,6 @@ The factor comes straight from CMS. The dollar base is an estimate built from th
 
 ## How to read "penalized but not estimable"
 These hospitals have a CMS factor below 1 but no usable cost-report base, so they count toward CMS's number of penalized hospitals but add $0 to our total. The report lists how many there are.
+
+## How big is the error? (90% interval)
+`python -m analysis.penalty_uncertainty` puts a number on assumptions A1-A4. It rebuilds every hospital's base a second way, from CMS's FY2026 IPPS Impact File (transfer-adjusted cases x case-mix index x FY2026 wage-adjusted standardized amounts), reports how far the two bases are apart, and runs a Monte Carlo that resamples those observed gaps, the observed drift in CMS's DRG payment ratios, and bases for penalized hospitals that have none. Results and every distribution are in [penalty_uncertainty.md](penalty_uncertainty.md).
