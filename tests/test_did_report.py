@@ -6,9 +6,10 @@ import pytest
 
 pytest.importorskip("pyfixest")
 
+from test_did import NM_TRUE, simulate  # noqa: E402  (pytest puts tests/ on sys.path)
+
 from analysis import did_report  # noqa: E402
 from hrrp.causal import did  # noqa: E402
-from tests.test_did import NM_TRUE, simulate  # noqa: E402
 
 
 def report_panel():
