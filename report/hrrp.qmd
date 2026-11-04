@@ -1,0 +1,390 @@
+---
+title: "Does Medicare's readmission penalty work, and what does it cost?"
+subtitle: "Findings from the HRRP penalties project: a regression discontinuity, a Cures Act event study, FY2026 penalty dollars and the drivers of readmission ratios"
+author: "Khushi"
+date: last-modified
+date-format: "D MMMM YYYY"
+---
+
+```{python}
+#| label: setup
+# Every number in this report is read from files committed to the repository:
+#   analysis/output/*.csv        (written by the analysis scripts from the dbt marts)
+#   analysis/output/hrrp_chain_workbook.xlsx (SEC_Financials sheet: 10-K values)
+#   docs/figures/**/*.png        (figures the analysis scripts saved)
+# Nothing here connects to DuckDB or downloads data, so GitHub Actions can render it.
+# The only hand-typed numbers are the ERR model R-squared values, which the model
+# run writes to docs/err_model_findings.md and not to a CSV; they are cited there.
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+ROOT = Path.cwd().parent if Path.cwd().name == "report" else Path.cwd()
+OUT = ROOT / "analysis" / "output"
+FIG = ROOT / "docs" / "figures"
+
+# Palette: two validated categorical slots plus muted ink for reference lines.
+BLUE, ORANGE, MUTED, INK, INK2 = "#2a78d6", "#eb6834", "#898781", "#0b0b0b", "#52514e"
+plt.rcParams.update({
+    "figure.facecolor": "#fcfcfb", "axes.facecolor": "#fcfcfb",
+    "axes.edgecolor": MUTED, "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
+    "axes.spines.top": False, "axes.spines.right": False,
+    "axes.grid": True, "grid.color": "#e6e5e0", "grid.linewidth": 0.6,
+    "font.size": 10, "axes.titlesize": 11, "axes.titleweight": "bold", "axes.titlecolor": INK,
+    "lines.linewidth": 2,
+})
+
+
+def pct(x, d=2, sign=True):
+    """ERR difference (e.g. 0.0003) -> '% of expected' string ('+0.03%')."""
+    return f"{100 * x:+.{d}f}%" if sign else f"{100 * x:.{d}f}%"
+
+
+def usd_m(x, d=1):
+    return f"${x / 1e6:,.{d}f}M"
+
+
+def num(x):
+    return f"{int(round(x)):,}"
+
+
+# ---- RD -------------------------------------------------------------------------
+rd = pd.read_csv(OUT / "rd_estimates.csv")
+rd_est = rd[rd.section == "estimate"]
+rd_main = rd_est[(rd_est.horizon == 3) & (rd_est.label == "All conditions")].iloc[0]
+rd_t4 = rd_est[(rd_est.horizon == 4) & (rd_est.label == "All conditions")].iloc[0]
+rd_t1 = rd_est[(rd_est.horizon == 1) & (rd_est.label == "All conditions")].iloc[0]
+rd_bal = rd[rd.section == "balance"].set_index("label")
+rd_pre = rd_bal[rd_bal.index.str.contains("pre-period")].iloc[0]
+rd_rob = rd[rd.section == "robustness"].set_index("label")
+dens = pd.read_csv(OUT / "rd_density.csv").set_index("label")
+rd_density_p = dens.loc["All conditions", "p_jackknife"]
+comp = pd.read_csv(OUT / "rd_compliance.csv")
+
+# ---- DiD / event study ------------------------------------------------------------
+intensity = pd.read_csv(OUT / "did_intensity.csv")
+q25, q75 = intensity.dpen.quantile([0.25, 0.75])
+IQR = q75 - q25  # effects are shown per interquartile change in the simulated penalty (pp)
+es = pd.read_csv(OUT / "did_event_study.csv")
+tests = pd.read_csv(OUT / "did_tests.csv")
+
+
+def did_row(spec, test):
+    return tests[(tests.spec == spec) & (tests.test == test)].iloc[0]
+
+
+did_pre_main = did_row("main", "pretrend")
+did_pre_rule = did_row("rule_only", "pretrend")
+did_main_22 = did_row("main", "post_avg_pre-COVID")
+did_rule_22 = did_row("rule_only", "post_avg_pre-COVID")
+did_rule_all = did_row("rule_only", "post_avg_all")
+did_main_all = did_row("main", "post_avg_all")
+did_pre_ccn = did_row("ccn_cond", "pretrend")
+placebos = tests[tests.test == "placebo"]
+n_up = int((intensity.direction == "up").sum())
+n_down = int((intensity.direction == "down").sum())
+
+# ---- Dollars ----------------------------------------------------------------------
+nat = pd.read_csv(OUT / "national.csv").iloc[0]
+cond = pd.read_csv(OUT / "by_condition.csv")
+sysd = pd.read_csv(OUT / "by_system.csv").set_index("parent_system")
+own = pd.read_csv(OUT / "by_ownership.csv")
+state = pd.read_csv(OUT / "by_state.csv")
+cms_counts = pd.read_csv(OUT / "cms_file_counts.csv").iloc[0]
+gap = pd.read_csv(OUT / "impact_gap_summary.csv").iloc[0]
+gap_ratio = gap["total_ratio (sum IF / sum CR)"]
+iv = pd.read_csv(OUT / "penalty_interval.csv")
+iv_all = iv[iv.population == "all penalized hospitals"].set_index(["level", "name"])
+iv_same = iv[iv.population == "same hospitals as the point estimate"].set_index(["level", "name"])
+nat_all = iv_all.loc[("national", "national")]
+nat_same = iv_same.loc[("national", "national")]
+CHAINS = ["HCA Healthcare", "Tenet Healthcare", "Community Health Systems", "Universal Health Services"]
+chain_total = sysd.loc[CHAINS, "est_total_penalty_usd"].sum()
+
+sec = pd.read_excel(OUT / "hrrp_chain_workbook.xlsx", sheet_name="SEC_Financials")
+latest_fy = int(sec["Fiscal year"].max())
+sec = sec[sec["Fiscal year"] == latest_fy].set_index("Company")
+# Same rule as the workbook's column L: reported operating income, else EBIT (pre-tax + interest).
+sec["op_income"] = sec["Operating income (reported)"].fillna(sec["Pre-tax income"] + sec["Interest expense"])
+sec["basis"] = np.where(sec["Operating income (reported)"].notna(), "reported", "EBIT")
+
+# ---- ERR model ----------------------------------------------------------------------
+coef = pd.read_csv(OUT / "err_model_coefficients.csv")
+main_coef = coef[coef.model == "main (HC3)"].set_index("term")
+dual = main_coef.loc["dual_10pp"]
+fp = main_coef.loc["C(ownership, Treatment('Nonprofit'))[T.For-profit]"]
+by_cond_model = pd.read_csv(OUT / "err_model_by_condition.csv")
+```
+
+::: {.callout-note appearance="simple"}
+## Bottom line
+
+- **Being penalized does not detectably lower readmissions.** Hospitals just above their peer-group median (penalized) have readmissions `{python} pct(rd_main.estimate)` of expected different, three payment years later, from hospitals just below it (robust 95% CI `{python} pct(rd_main.ci_low)` to `{python} pct(rd_main.ci_high)`; `{python} num(rd_main.n)` hospital-condition-years, `{python} num(rd_main.n_clusters)` hospitals). The interval rules out effects larger than about a third of a percent in either direction.
+- **A second design agrees, with weaker evidence.** An event study of the 2019 peer-group reform finds no credible effect: its pre-trend test fails (p = `{python} f"{did_pre_rule.p:.3f}"`), so it cannot be read as causal, and its best version is `{python} pct(did_rule_22.estimate * IQR)` (95% CI `{python} pct(did_rule_22.ci_low * IQR)` to `{python} pct(did_rule_22.ci_high * IQR)`).
+- **The penalty is still real money.** FY2026 HRRP cuts an estimated **`{python} usd_m(nat.est_total_penalty_usd)`** from `{python} num(nat.hospitals_penalized)` hospitals (90% interval `{python} usd_m(nat_all.p5_usd)` to `{python} usd_m(nat_all.p95_usd)` across all penalized hospitals). Pneumonia and heart failure are `{python} f"{cond.set_index('condition').loc[['Pneumonia', 'Heart failure'], 'pct_of_total'].sum():.1f}"`% of it.
+- **What predicts readmissions is mostly not the hospital's structure.** Hospital and county traits explain 6.9% of the variation in readmission ratios; dual-eligible share is the strongest single factor.
+:::
+
+# The question
+
+Since FY2013 Medicare's Hospital Readmissions Reduction Program (HRRP) has cut up to 3% of a hospital's base inpatient payments when its readmissions for six conditions (heart attack, heart failure, pneumonia, COPD, bypass surgery, hip/knee replacement) are worse than expected. CMS publishes each hospital's cut as a factor such as 0.9950, never in dollars, and never says whether the cut changes what hospitals do.
+
+This report answers three questions, in order of how much they matter for policy:
+
+1. **Does being penalized make a hospital reduce readmissions?** If so, by how much? (Causal: regression discontinuity, plus an event study as a second design.)
+2. **How many dollars does the penalty move, and where?** (By condition, state, ownership and the four public hospital chains, with an uncertainty interval.)
+3. **What explains which hospitals have high readmission ratios?** (Cross-sectional regression and gradient-boosted trees: associations, not causes.)
+
+# Data
+
+All data is public and official, downloaded by `ingest/download.py` with a manifest and SHA-256 for every file. Nothing is synthetic.
+
+| Source | Years | Used for |
+|---|---|---|
+| CMS HRRP supplemental files and Provider Data Catalog HRRP file | FY2016-FY2027 (12 payment years) | Excess readmission ratios (ERR), peer-group medians, penalty indicators, DRG payment ratios, adjustment factors |
+| CMS Hospital General Information | current | Ownership, type, star rating |
+| CMS hospital cost reports (HCRIS) | 2024-25 reports | Medicare base DRG payments (the dollars the factor applies to), beds, teaching |
+| CMS FY2026 IPPS Impact File and final rule | FY2026 | Second, independent payment base for the uncertainty interval |
+| CMS Hospital All Owners and Enrollments | current | Parent system for HCA, Tenet, CHS, UHS |
+| Census ACS 2024 5-year | 2024 | County income and share aged 65+ |
+| SEC EDGAR companyfacts (10-K XBRL) | FY2021-FY`{python} latest_fy` | Chains' revenue and operating income |
+
+Files are loaded into DuckDB and modelled with **dbt** (staging, intermediate, marts) with data tests on every join. Two marts feed this report:
+
+- `mart.hospital` / `mart_hospital_penalty`: one row per hospital for FY2026 (`{python} num(nat.hospitals_in_hrrp_file)` hospitals in the HRRP file, `{python} num(nat.hospitals_with_cms_factor)` with a CMS factor, `{python} num(nat.hospitals_estimable)` with a usable payment base).
+- `mart.fct_hospital_condition_year`: one row per hospital x condition x payment year, FY2016-FY2027, the panel behind the RD and the event study.
+
+**Why this report reads CSVs, not the database.** The DuckDB database is built from downloaded CMS files and isn't committed, and CI cannot download from cms.gov. The analysis scripts write every table they report to `analysis/output/*.csv` from those marts, and those CSVs are committed. Rendering from them means the published report shows exactly the numbers of the last real-data run, and GitHub Actions can rebuild it in under a minute with no secrets. The alternative, rendering from the 50-hospital CI fixture, would publish numbers that are real but meaningless for the whole country, so it is not used.
+
+# Methods
+
+**Penalty dollars.** I rebuilt CMS's formula (42 CFR 412.154): for each condition with 25+ eligible discharges and ERR above its dual-eligible peer-group median, the excess (ERR minus median) is weighted by that condition's DRG payment ratio and the neutrality modifier, summed and capped at 3%. My recomputed factor matches CMS's published factor for all `{python} num(cms_counts.hospitals_in_cms_file)` hospitals in its FY2026 file. Dollars = (1 - factor) x the hospital's annual Medicare base DRG payments from its latest cost report. The condition split uses CMS's own per-condition terms.
+
+**Uncertainty (Monte Carlo).** Neither cost reports nor the Impact File are FY2026 actual payments. 10,000 draws vary the payment-base source (50/50 between the two), resample each hospital's observed cost-report vs Impact File gap, and impute a base for penalized hospitals that have none. The DRG-ratio drift is shown separately as a sensitivity because it only moves the split between conditions.
+
+**Regression discontinuity (causal question).** Within a condition and year, CMS penalizes a condition only if its ERR is above the peer-group median (and it has 25+ discharges). Hospitals just above and just below the median are near-identical, so comparing their *later* readmissions estimates the effect of being flagged. Running variable: ERR minus peer median in FY t (FY2019-FY2024). Outcome: same condition's ERR in FY t+3, the first year whose 3-year performance window does not overlap FY t's. Local-linear, triangular kernel, MSE-optimal bandwidth, robust bias-corrected CIs (`rdrobust`), condition x year fixed effects, standard errors clustered by hospital.
+
+**Event study (second design).** The 21st Century Cures Act made CMS compare hospitals with peers of similar dual-eligible share from FY2019. For each hospital I applied the old and new rules to the *same* FY2019 data; the difference (`dpen`, percentage points of base payments) is how much the reform alone moved its penalty. ERR is regressed on year x `dpen` with hospital and condition x year fixed effects, FY2018 as reference, errors clustered by hospital (`pyfixest`). A "rule-only" version adds year-specific slopes in the hospital's FY2019 ERR and old-rule penalty, to strip out mean reversion. Effects are scaled to the interquartile range of `dpen` (`{python} f"{IQR:.2f}"` pp).
+
+**Drivers (cross-section).** OLS of composite ERR on dual-eligible share, county income and 65+ share, beds, teaching and ownership, with HC3 robust errors, state clustering, a discharge-weighted version and a gradient-boosted tree with permutation importance as checks.
+
+**Tests.** `pytest` covers the penalty formula, the RD and event-study code (on simulated panels with a planted effect), the Monte Carlo and the reports; `dbt build` runs the data tests. Both run in GitHub Actions on every push.
+
+# Results
+
+## Does being penalized reduce readmissions? (regression discontinuity)
+
+First the design check: among condition-years with 25+ discharges, crossing the median switches the penalty on every time.
+
+```{python}
+#| label: tbl-compliance
+#| tbl-cap: "Share penalized on each side of the peer-group median (CMS penalty indicator), FY2019 onward"
+t = comp.copy()
+t["meets_min"] = t.meets_min.map({True: "25+ discharges", False: "under 25", "True": "25+ discharges", "False": "under 25"})
+t["share_penalized"] = (100 * t.share_penalized).round(1).astype(str) + "%"
+t["rows"] = t.rows.map(num)
+t["penalized"] = t.penalized.map(num)
+t.columns = ["Discharges", "Side of median", "Rows", "Penalized", "Share penalized"]
+t.style.hide(axis="index")
+```
+
+So on the 25+ sample the RD is **sharp**. The estimate:
+
+```{python}
+#| label: fig-rd-conditions
+#| fig-cap: "Jump in ERR at the peer-group median, three payment years later (FY t+3), with robust 95% CIs. Zero = no effect; negative = penalized hospitals readmit less."
+order = ["All conditions", "Heart attack (AMI)", "Heart failure", "Pneumonia", "COPD", "Bypass surgery (CABG)", "Hip/knee replacement"]
+d = rd_est[rd_est.horizon == 3].set_index("label").loc[order].iloc[::-1]
+fig, ax = plt.subplots(figsize=(7, 3.6))
+y = np.arange(len(d))
+ax.axvline(0, color=MUTED, lw=1)
+ax.hlines(y, 100 * d.ci_low, 100 * d.ci_high, color=BLUE, lw=2)
+ax.scatter(100 * d.estimate, y, color=BLUE, s=36, zorder=3, edgecolor="#fcfcfb", linewidth=1.5)
+ax.set_yticks(y, [f"{lab}  (n={num(n)})" for lab, n in zip(d.index, d.n)])
+ax.get_yticklabels()[-1].set_fontweight("bold")
+ax.set_xlabel("Change in readmissions, % of expected")
+ax.grid(axis="y", visible=False)
+plt.tight_layout()
+plt.show()
+```
+
+Pooled over the six conditions, being just over the line is followed by readmissions **`{python} pct(rd_main.estimate)`** of expected (95% CI `{python} pct(rd_main.ci_low)` to `{python} pct(rd_main.ci_high)`, p = `{python} f"{rd_main.p_robust:.2f}"`). No single condition is distinguishable from zero. The one-year-later outcome (`{python} pct(rd_t1.estimate)`, which shares most of its discharges with the year that set the penalty) and the four-years-later outcome (`{python} pct(rd_t4.estimate)`, CI `{python} pct(rd_t4.ci_low)` to `{python} pct(rd_t4.ci_high)`) say the same.
+
+![Binned means of FY t+3 ERR against distance from the peer-group median, all conditions (from `analysis/rd_report.py`).](../docs/figures/rd/rd_all_conditions_t3.png){#fig-rd-bins width=85%}
+
+**Validity checks all pass:**
+
+- No bunching just under the median (density test p = `{python} f"{rd_density_p:.2f}"`), so hospitals are not steering their ERR below the line.
+- The pre-period ERR doesn't jump at the cutoff (`{python} f"{rd_pre.estimate:+.4f}"`, p = `{python} f"{rd_pre.p_robust:.2f}"`), nor do beds, ownership, teaching status, dual share or the chance of still being in the data three years later.
+- Placebo cutoffs at -0.05 and +0.05, a donut that drops hospitals closest to the median, half and double the bandwidth, and a fuzzy RD on all rows (including under-25 cases) are all null.
+
+## Did the 2019 peer-group reform change readmissions? (event study)
+
+The Cures Act reform raised the penalty for `{python} num(n_up)` hospitals and cut it for `{python} num(n_down)`, almost entirely according to dual-eligible peer group. If penalties change behaviour, hospitals whose penalty went up should have reduced readmissions relative to those whose penalty went down.
+
+The rule is coded right: recomputing CMS's FY2019 factors with the new rule matches all 3,173 hospitals in its FY2019 file.
+
+```{python}
+#| label: fig-did
+#| fig-cap: "Event study: effect of an interquartile (0.09 pp) bigger reform-driven penalty on ERR, % of expected, 95% CIs. FY2018 = 0. Shaded: pre-reform leads, which should be zero."
+fig, ax = plt.subplots(figsize=(7.5, 3.8))
+ax.axhline(0, color=MUTED, lw=1)
+ax.axvspan(2015.5, 2018.5, color="#f0efec", zorder=0)
+for spec, colr, off, name in [("main", BLUE, -0.12, "Main"), ("rule_only", ORANGE, 0.12, "Rule-only (controls for mean reversion)")]:
+    s = es[es.spec == spec].sort_values("fiscal_year")
+    x = s.fiscal_year + off
+    est = 100 * s.estimate * IQR
+    ax.vlines(x, 100 * s.ci_low * IQR, 100 * s.ci_high * IQR, color=colr, lw=1.6)
+    ax.plot(x, est, "o-", color=colr, ms=5, lw=1.4, label=name, markeredgecolor="#fcfcfb")
+ax.set_xticks(range(2016, 2028), [f"FY{str(y)[2:]}" for y in range(2016, 2028)])
+ax.set_ylabel("Change in readmissions, % of expected")
+ax.text(2016.0, ax.get_ylim()[1] * 0.92, "leads (pre-reform)", color=INK2, fontsize=9)
+ax.legend(frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2)
+ax.grid(axis="x", visible=False)
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-did
+#| tbl-cap: "Event study summary. Pre-trend: joint test that the FY2016 and FY2017 leads are zero. Effects per 0.09 pp bigger penalty, % of expected readmissions (binary rows: down-minus-up gap)."
+labels = {"main": "Main", "rule_only": "Rule-only", "ccn_cond": "Hospital x condition FE",
+          "no_switchers": "Drop peer-group switchers", "binary": "Binary: down vs up",
+          "binary_rule_only": "Binary, rule-only controls"}
+rows = []
+for spec, lab in labels.items():
+    pre, p22, pall = did_row(spec, "pretrend"), did_row(spec, "post_avg_pre-COVID"), did_row(spec, "post_avg_all")
+    k = 1 if spec.startswith("binary") else IQR
+    f = lambda r: f"{pct(r.estimate * k)} ({pct(r.ci_low * k)} to {pct(r.ci_high * k)})"  # noqa: E731
+    rows.append([lab, f"{pre.p:.3f}", f(p22), f(pall)])
+pd.DataFrame(rows, columns=["Specification", "Pre-trend p", "FY2022 (pre-COVID)", "All post years FY2022-27"]).style.hide(axis="index")
+```
+
+**Reading it:** the main specification has the *wrong* sign (bigger penalty, higher later readmissions, `{python} pct(did_main_all.estimate * IQR)` averaged over FY2022-27), and most of that disappears once mean reversion is controlled (rule-only: `{python} pct(did_rule_all.estimate * IQR)`, CI `{python} pct(did_rule_all.ci_low * IQR)` to `{python} pct(did_rule_all.ci_high * IQR)`). Every specification except the hospital x condition one (p = `{python} f"{did_pre_ccn.p:.3f}"`) fails the pre-trend test at 5%, so **none of these numbers is causal**. Placebo reforms in FY2017 and FY2018 are null (p = `{python} f"{placebos.p.iloc[0]:.2f}"` and `{python} f"{placebos.p.iloc[1]:.2f}"`). The design is weak here because the reform's effect on a hospital is almost a function of its dual-eligible share, so the event study mostly compares low- and high-dual hospitals, whose trends differ for reasons other than HRRP.
+
+**Both designs point the same way:** neither finds that penalties lower later readmissions. The RD is the cleaner of the two and is the headline.
+
+## How many dollars, and where?
+
+```{python}
+#| label: fig-dollars
+#| fig-cap: "Estimated FY2026 HRRP penalty by condition, with 90% Monte Carlo interval over the same hospitals as the point estimate."
+c = cond.set_index("condition").iloc[::-1]
+lo = iv_same.loc["condition"].loc[c.index, "p5_usd"]
+hi = iv_same.loc["condition"].loc[c.index, "p95_usd"]
+fig, ax = plt.subplots(figsize=(7, 3.2))
+y = np.arange(len(c))
+ax.barh(y, c.est_penalty_usd / 1e6, color=BLUE, height=0.62, edgecolor="#fcfcfb", linewidth=2)
+ax.hlines(y, lo / 1e6, hi / 1e6, color=INK, lw=1.2)
+for yi, (v, sh) in enumerate(zip(c.est_penalty_usd, c.pct_of_total)):
+    ax.text(hi.iloc[yi] / 1e6 + 1.5, yi, f"${v / 1e6:.1f}M  ({sh:.1f}%)", va="center", color=INK2, fontsize=9)
+ax.set_yticks(y, c.index)
+ax.set_xlabel("$ millions")
+ax.set_xlim(0, hi.max() / 1e6 * 1.35)
+ax.grid(axis="y", visible=False)
+plt.tight_layout()
+plt.show()
+```
+
+- **National:** `{python} usd_m(nat.est_total_penalty_usd)` from `{python} num(nat.hospitals_penalized)` penalized hospitals (`{python} f"{nat.pct_penalized:.1f}"`% of those with a factor; CMS's own file counts `{python} num(cms_counts.penalized_in_cms_file)`). Median penalty per penalized hospital `{python} f"${nat.median_penalty_penalized_usd:,.0f}"`; largest `{python} usd_m(nat.max_penalty_usd, 2)`.
+- **Uncertainty:** 90% interval `{python} usd_m(nat_same.p5_usd)` to `{python} usd_m(nat_same.p95_usd)` over the same hospitals, `{python} usd_m(nat_all.p5_usd)` to `{python} usd_m(nat_all.p95_usd)` once the `{python} num(nat.penalized_but_not_estimable)` penalized hospitals with no usable cost report are added (simulation mean `{python} usd_m(nat_all.mc_mean_usd)`). Summed over the `{python} num(gap.hospitals)` hospitals with both, the Impact File base is `{python} f"{gap_ratio:.3f}"`x the cost-report base, so the point estimate is more likely low than high.
+- **Ownership:** for-profit ("Proprietary") hospitals lose `{python} f"{own.set_index('hospital_ownership').loc['Proprietary', 'penalty_pct_of_base_drg']:.2f}"`% of base DRG payments, against `{python} f"{own.set_index('hospital_ownership').loc['Voluntary non-profit - Private', 'penalty_pct_of_base_drg']:.2f}"`% for private nonprofits.
+- **States:** the highest rate is `{python} state.loc[state.penalty_pct_of_base_drg.idxmax(), 'state']` at `{python} f"{state.penalty_pct_of_base_drg.max():.2f}"`% of base payments.
+
+![National total: point estimate and Monte Carlo draws (from `analysis/penalty_uncertainty.py`).](../docs/figures/uncertainty/national_interval.png){#fig-interval width=80%}
+
+**The four public chains** lose `{python} usd_m(chain_total)` together. Against their FY`{python} latest_fy` operating income from 10-K filings, that is small:
+
+```{python}
+#| label: tbl-chains
+#| tbl-cap: "Chains: estimated FY2026 penalty, 90% interval, and share of latest operating income (EBIT where operating income isn't reported, as in the Excel workbook)."
+rows = []
+for ch in CHAINS:
+    pen = sysd.loc[ch, "est_total_penalty_usd"]
+    g = iv_all.loc[("group", ch)]
+    oi = sec.loc[ch, "op_income"]
+    rows.append([ch, num(sysd.loc[ch, "hospitals_in_hrrp_file"]), num(sysd.loc[ch, "penalized"]), usd_m(pen),
+                 f"{usd_m(g.p5_usd)} to {usd_m(g.p95_usd)}", f"${oi / 1e9:,.2f}B ({sec.loc[ch, 'basis']})",
+                 f"{100 * pen / oi:.2f}%"])
+pd.DataFrame(rows, columns=["Chain", "HRRP hospitals", "Penalized", "Penalty", "90% interval",
+                            f"Op. income FY{latest_fy}", "Penalty / op. income"]).style.hide(axis="index")
+```
+
+Scenario and ROI analysis for each chain (how much a 10-30% cut in excess readmissions would save, and whether a care-transitions program pays for itself) is in the [Excel workbook](https://github.com/khus-hi/hrrp-penalties/raw/main/analysis/output/hrrp_chain_workbook.xlsx), where every number is a live formula.
+
+## What explains readmission ratios? (cross-section)
+
+```{python}
+#| label: fig-drivers
+#| fig-cap: "Association with readmissions vs expected (OLS, HC3 robust 95% CIs), composite ERR across hospitals. 'Other' (mostly tribal) and physician-owned hospitals are left out: there are few of them and their intervals are too wide to read on this scale."
+names = {
+    "dual_10pp": "Dual-eligible share, +10 pts",
+    "C(ownership, Treatment('Nonprofit'))[T.For-profit]": "For-profit vs nonprofit",
+    "C(ownership, Treatment('Nonprofit'))[T.Government]": "Government vs nonprofit",
+    "log2_beds": "Beds, per doubling",
+    "teaching[T.True]": "Teaching hospital",
+    "income_10k": "County income, +$10k",
+    "age65_5pp": "County 65+ share, +5 pts",
+}
+m = main_coef.loc[list(names)].iloc[::-1]
+fig, ax = plt.subplots(figsize=(7, 3.4))
+y = np.arange(len(m))
+ax.axvline(0, color=MUTED, lw=1)
+ax.hlines(y, 100 * m.ci_low, 100 * m.ci_high, color=BLUE, lw=2)
+ax.scatter(100 * m.coef, y, color=BLUE, s=36, zorder=3, edgecolor="#fcfcfb", linewidth=1.5)
+ax.set_yticks(y, [names[t] for t in m.index])
+ax.set_xlabel("% of expected readmissions")
+ax.grid(axis="y", visible=False)
+plt.tight_layout()
+plt.show()
+```
+
+Hospital and county characteristics explain only **6.9%** of the variation in readmission ratios, and social risk (mostly dual-eligible share) is about two-thirds of that (R² values from [the model findings](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/err_model_findings.md)). Each 10 points of dual-eligible share goes with readmissions `{python} pct(dual.coef)` of expected higher (95% CI `{python} pct(dual.ci_low)` to `{python} pct(dual.ci_high)`), and for-profit ownership with `{python} pct(fp.coef)` (`{python} pct(fp.ci_low)` to `{python} pct(fp.ci_high)`), which halves once star rating is added. Teaching status, county age and government ownership show no association. A gradient-boosted tree does only slightly better than the linear model and ranks dual-eligible share first too.
+
+These are associations. CMS already compares each hospital only with its dual-eligible peer group, so much of the dual-share link is neutralized in the dollars.
+
+# Threats to validity
+
+**Regression discontinuity**
+
+- *Local effect.* It is the effect of being just over the median, where the formula charges almost nothing (the penalty grows with distance above the median). Hospitals far above the median pay more and could respond more; the RD can't speak to them.
+- *Bundled treatment.* A hospital just over the line in FY t is more likely to be over it in later years too, so the estimate is the effect of FY t's status including those follow-on penalties (intent to treat).
+- *Spillovers.* A hospital penalized on one condition may improve discharge planning for all, including conditions just under the median, which would bias the jump toward zero. The event study, which works at hospital level, is the check, and it also finds nothing credible.
+- *Timing.* The FY t+3 window starts about a year before the hospital receives its FY t report; the t+4 outcome, fully after, gives the same answer.
+- *Many comparisons.* Six conditions, three horizons and many robustness rows: some "significant" results would appear by chance. None did.
+
+**Event study**
+
+- Pre-trends fail in every specification but one, with only two clean lead years. Reform exposure is almost a function of dual share, so anything else that hit safety-net hospitals after 2017 (COVID, Medicaid expansion timing) is confounded with it.
+- `dpen` is built from FY2019 outcomes; the rule-only controls handle linear mean reversion only.
+
+**Dollars**
+
+- The payment base is 2024-25 cost reports, not FY2026 claims, and CMS publishes no FY2026 dollar total to check against. The Impact File cross-check and the Monte Carlo interval bound this; both sources suggest the point estimate is slightly low.
+- Chain membership is today's CMS ownership record; hospital counts differ from the 10-Ks for Tenet and CHS. Penalty / operating income compares a Medicare-only penalty to company-wide income.
+
+**Drivers**
+
+- Cross-sectional, with heavy-tailed residuals and no data on staffing, post-acute supply or observation stays. CMS shrinks small hospitals' ERRs toward 1, which affects any bed-size result.
+
+# What to do with it
+
+**For a CMS or policy analyst**
+
+- The evidence here does not support the idea that the threshold penalty, as designed, pushes marginal hospitals to cut readmissions. With a 95% CI of `{python} pct(rd_main.ci_low)` to `{python} pct(rd_main.ci_high)`, any effect at the line is smaller than about a third of a percent of expected readmissions.
+- The marginal penalty at the median is close to zero by design. If the goal is behaviour change at the margin, a design with a meaningful step at the threshold, or rewards for improvement over a hospital's own baseline, would give hospitals near the line a reason to act. This report can't say that would work; it says the current gradient isn't detectably doing it.
+- Peer grouping by dual share redistributed penalties toward low-dual hospitals without a detectable change in readmissions. That is consistent with it doing what it was meant to (fairness), not with it changing outcomes.
+- The `{python} usd_m(nat.est_total_penalty_usd)` is a transfer from hospitals that don't appear to respond to it, concentrated in pneumonia and heart failure. That is worth weighing against hospitals' compliance and reporting costs.
+
+**For a hospital quality or finance lead**
+
+- Find your own dollars and condition split in the Tableau dashboards or in `analysis/output/hospital_penalty.csv`: the penalty is concentrated, so one or two conditions usually drive it.
+- Judge readmission programs on their clinical and margin case, not on penalty avoided. For the large chains the penalty is `{python} f"{min(100 * sysd.loc[ch, 'est_total_penalty_usd'] / sec.loc[ch, 'op_income'] for ch in CHAINS):.2f}"`% to `{python} f"{max(100 * sysd.loc[ch, 'est_total_penalty_usd'] / sec.loc[ch, 'op_income'] for ch in CHAINS):.2f}"`% of operating income, and the workbook's ROI sheet shows an all-patients care-transitions program does not pay for itself on the penalty alone; targeting high-risk patients is the only way it breaks even.
+- Because you're compared with peers of similar dual share, small differences around the median decide whether you're penalized at all; your distance from the median per condition matters more than the national ERR of 1.0.
+- If you serve many dual-eligible patients, expect higher ERRs than CMS's clinical risk adjustment predicts; peer grouping offsets part of that, but not all.
+
+# Reproduce
+
+Code, data lineage and every intermediate table are in the repository: <https://github.com/khus-hi/hrrp-penalties>. The full method reports are in `docs/` ([RD](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/rd_report.md), [event study](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/did_report.md), [penalty](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/penalty_report.md), [uncertainty](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/penalty_uncertainty.md), [ERR model](https://github.com/khus-hi/hrrp-penalties/blob/main/docs/err_model_findings.md)). This page is rebuilt by GitHub Actions from the committed outputs on every push to `main`.

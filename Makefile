@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-.PHONY: help install ingest build docs analysis uncertainty panel rd did workbook tableau test lint all fixtures fixture-db ci schema-check
+.PHONY: help install ingest build docs analysis uncertainty panel rd did workbook tableau report test lint all fixtures fixture-db ci schema-check
 
 help:  ## List the targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -46,6 +46,9 @@ workbook:  ## Rebuild the Excel workbook (overwrites analysis/output/hrrp_chain_
 
 tableau:  ## Rebuild the Tableau CSVs (overwrites dashboard/tableau_exports/)
 	$(PYTHON) -m dashboard.export_tableau
+
+report:  ## Render the findings report (report/hrrp.qmd -> report/_site/hrrp.html) from the committed outputs; needs Quarto
+	cd report && quarto render
 
 test:  ## Unit tests (no downloads, about a second)
 	$(PYTHON) -m pytest

@@ -17,3 +17,6 @@ dbt/logs/
 dbt/dbt_packages/
 dbt/.user.yml
 logs/
+report/_site/
+report/.quarto/
+report/*_files/

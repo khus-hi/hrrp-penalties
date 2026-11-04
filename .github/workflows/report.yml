@@ -1,0 +1,79 @@
+# Findings report: renders report/hrrp.qmd with Quarto and publishes it to GitHub Pages.
+#
+# The report reads only committed files (analysis/output/*.csv, the Excel workbook's
+# SEC sheet, docs/figures/*.png), so this job needs no database, no downloads and no
+# secrets. Pull requests render the report as a check; pushes to main also publish it.
+# GitHub Pages and Actions are free on a public repository.
+#
+# One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+name: Report
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "report/**"
+      - "analysis/output/**"
+      - "docs/figures/**"
+      - ".github/workflows/report.yml"
+  pull_request:
+    paths:
+      - "report/**"
+      - "analysis/output/**"
+      - "docs/figures/**"
+      - ".github/workflows/report.yml"
+  workflow_dispatch:  # "Run workflow" button to republish by hand
+
+permissions:
+  contents: read
+
+concurrency:
+  group: report-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Only what the report's Python cells import; the full pipeline isn't needed.
+      - name: Install report dependencies
+        run: python -m pip install pandas numpy matplotlib openpyxl jupyter
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.6.40
+
+      # Run from inside report/: from the repo root Quarto would read .env.example and
+      # stop because SEC_USER_AGENT and CENSUS_API_KEY are unset (the report needs neither).
+      - name: Render report/hrrp.qmd
+        working-directory: report
+        run: quarto render
+
+      # Pages serves index.html at the site root; keep hrrp.html as a stable link too.
+      - name: Add index page
+        run: cp report/_site/hrrp.html report/_site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: report/_site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: render
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
