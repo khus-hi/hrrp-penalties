@@ -73,5 +73,12 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 - **Checks:** rddensity density test, covariate balance (beds, dual share, ownership, teaching, the pre-period ERR, attrition), placebo cutoffs at -0.05 and +0.05, a donut without abs(x) < 0.002, half and double bandwidth.
 - **Report:** `make rd` writes [rd_report.md](rd_report.md), `docs/figures/rd/*.png` and `analysis/output/rd_*.csv`.
 
+## 11. Did the FY2019 peer-group reform change readmissions? Event study (`hrrp/causal/did.py`)
+- **Natural experiment:** the 21st Century Cures Act switched HRRP from "ERR above 1" to "ERR above your dual-eligible peer group's median" in FY2019. Applying both rules to the same FY2019 ERRs gives each hospital a simulated penalty change (dpen, pp of base DRG payments) that depends only on the rule. The new-rule code is checked by recomputing CMS's FY2019 adjustment factors.
+- **Estimation:** pyfixest, ERR on year x dpen (FY2018 reference), hospital and condition x year fixed effects, errors clustered by hospital, FY2016 to the last loaded year.
+- **Checks:** joint pre-trend test on the FY2016-FY2017 leads, placebo reform years FY2017 and FY2018, dropping hospitals that changed peer group, a binary down-vs-up version, hospital x condition fixed effects, and "rule-only" controls (year-specific slopes in the FY2019 ERR and old-rule penalty that dpen is built from, against mean reversion).
+- **Tests:** `tests/test_did.py` plants a known effect in a simulated panel and checks the estimator recovers it, the pre-trend test catches a planted pre-trend, and the rules match hand-worked examples. Simulated data are only used there.
+- **Report:** `make did` writes [did_report.md](did_report.md), `docs/figures/did/*.png` and `analysis/output/did_*.csv`, including the comparison with the RD.
+
 ## Not done yet (on purpose)
 - The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
