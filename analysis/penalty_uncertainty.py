@@ -126,10 +126,10 @@ def load_drift(con) -> tuple[dict, pd.DataFrame, int | None]:
     pools, rows = {}, []
     for c in U.CONDITIONS:
         x, lo, hi = U.trimmed(j.loc[j.condition == c, "log_drift"])
-        # Centred: the spread across hospitals is the noise we resample. The median shift is a
+        # Centred (average multiplier 1): the spread across hospitals is the noise we resample. The median shift is a
         # trend (e.g. hip/knee surgery moving to outpatient), and applying it would be a forecast,
         # so it is reported, not applied.
-        pools[c] = x - np.median(x) if len(x) else x
+        pools[c] = U.mean_one(x)
         if len(x):
             q = np.exp(np.percentile(x, [5, 50, 95]))
             rows.append({"condition": c, "hospitals": len(x), "ratio_change_p5": q[0], "median (trend, not applied)": q[1],
@@ -366,12 +366,12 @@ def main():
         "sources differ systematically (different years and rates) and neither is FY2026 actuals, so the choice "
         "moves every hospital together. 50/50 is a CHOICE: no data says which source is closer. |\n"
         f"| Payment base, hospital noise | Each hospital's base x exp(e), e resampled per hospital | Observed log gaps "
-        f"ln(Impact/cost report) for {len(log_gap):,} hospitals, centred on their median and divided by sqrt(2) "
+        f"ln(Impact/cost report) for {len(log_gap):,} hospitals, divided by sqrt(2) and shifted so the average multiplier is 1 "
         f"(equal noise in each source). Gaps outside the 1st-99th percentile ({np.exp(cut_lo):.2f}x to "
         f"{np.exp(cut_hi):.2f}x) are left out of the pool as likely data errors. |\n"
         f"| DRG payment ratios | Each hospital-condition ratio x a resampled drift | Observed change in the same "
-        f"hospital's ratio from CMS's FY{drift_base} file to FY2026, per condition, trimmed at p1/p99 and centred on "
-        "its median: the spread is resampled, the median trend is shown below but not applied (applying it would "
+        f"hospital's ratio from CMS's FY{drift_base} file to FY2026, per condition, trimmed at p1/p99 and shifted so "
+        "the average multiplier is 1: the spread is resampled, the median trend is shown below but not applied (applying it would "
         "be a forecast). The factor stays CMS's, so this only moves dollars between conditions. |\n"
         f"| Penalized hospitals with no usable base ({len(pen_missing)}) | A base for each | The other source's base "
         "x a resampled gap; with neither source, the base of a random hospital in the same bed-size fifth. |\n",

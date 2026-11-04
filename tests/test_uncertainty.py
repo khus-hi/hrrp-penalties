@@ -53,6 +53,11 @@ def test_impact_base_uses_table_1a_above_one_and_1b_otherwise():
     assert got[1] == pytest.approx(10 * 2.0 * (500 * 0.9 + 500 * 1.0))
 
 
+def test_mean_one_makes_average_multiplier_one():
+    x = U.mean_one(np.random.default_rng(0).normal(0.3, 0.8, 5000))
+    assert np.mean(np.exp(x)) == pytest.approx(1.0)
+
+
 def test_gap_summary():
     s = U.gap_summary([0.9, 1.0, 1.1, 1.3, np.nan, -1])
     assert s["hospitals"] == 4

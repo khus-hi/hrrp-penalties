@@ -13,9 +13,9 @@ distribution is resampled from observed data (no assumed shapes):
    source's *level* is right, 50/50, because the two differ systematically (different
    years and rates) and that choice moves every hospital together. Within the chosen
    source each hospital gets an idiosyncratic error resampled from the observed
-   hospital-level gaps ln(Impact / cost report), centred on their median and scaled by
-   1/sqrt(2) (if both sources are equally noisy, each carries half the variance of
-   their difference).
+   hospital-level gaps ln(Impact / cost report), scaled by 1/sqrt(2) (if both sources
+   are equally noisy, each carries half the variance of their difference) and shifted so
+   the average multiplier exp(e) is exactly 1 (see mean_one).
 2. DRG payment ratios: CMS measures them over the performance period, years before the
    payment year. Each hospital-condition ratio is multiplied by a drift resampled from
    the observed change in that condition's ratio between two CMS files three years apart.
@@ -113,6 +113,16 @@ def trimmed(x, lo=1, hi=99) -> tuple[np.ndarray, float, float]:
     return x[(x >= a) & (x <= b)], float(a), float(b)
 
 
+def mean_one(log_x) -> np.ndarray:
+    """Shift a pool of log multipliers so exp() of a random draw averages exactly 1.
+
+    Centring on the median instead would leave E[exp(x)] > 1 (Jensen's inequality), so
+    noisier inputs would be biased upward just for being noisy.
+    """
+    x = np.asarray(log_x, dtype=float)
+    return x - np.log(np.mean(np.exp(x))) if len(x) else x
+
+
 def gap_summary(ratio) -> dict:
     """Distribution of Impact-File base / cost-report base across hospitals."""
     r = np.asarray(ratio, dtype=float)
@@ -192,7 +202,7 @@ def draw_bases(inp: MCInputs, rng, n_draws, vary_base=True, impute_missing=True)
     cr, ifb = inp.cr_base, inp.if_base
     has_cr, has_if = ~np.isnan(cr), ~np.isnan(ifb)
     gap = inp.log_gap if len(inp.log_gap) else np.zeros(1)
-    noise_pool = (gap - np.median(gap)) / np.sqrt(2)
+    noise_pool = mean_one(gap / np.sqrt(2))
 
     if not vary_base:
         base = np.tile(np.where(has_cr, cr, np.nan), (n_draws, 1))
