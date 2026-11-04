@@ -82,4 +82,4 @@ python -m models.build     ->  dbt build: seed.*, stg.* -> int.* -> mart.*, qa.*
 - **Report:** `make did` writes [did_report.md](did_report.md), `docs/figures/did/*.png` and `analysis/output/did_*.csv`, including the comparison with the RD.
 
 ## Not done yet (on purpose)
-- The SEC facts are staged (`stg.sec_annual`) but not yet in the mart. Revenue tags differ by company and will be chosen in the analysis step.
+- The SEC facts are staged (`stg.sec_annual`) and used by the Excel workbook (`analysis/build_workbook.py`, which picks each company's revenue and income tags), but they are not joined into the hospital mart: they are company-wide, not per hospital.

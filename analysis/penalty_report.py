@@ -88,12 +88,16 @@ def main():
                      f"{diag['hrrp_mentions']} HRRP mentions, {diag['passages_with_figures']} with a $ or hospital count._\n\n"
                      + ("\n".join(f"> {p}\n" for p in passages) or "_No matching passages found._"))
 
-    failed = con.execute("SELECT count(*) FROM qa.assertions WHERE failing_rows > 0").fetchone()[0]
+    # dbt tests at severity warn are reported separately: they flag rows to check, not errors.
+    failed, warned = con.execute(
+        "SELECT count(*) FILTER (WHERE failing_rows > 0 AND lower(result) NOT IN ('warn', 'pass')), "
+        "count(*) FILTER (WHERE failing_rows > 0 AND lower(result) = 'warn') FROM qa.assertions").fetchone()
     parts = [
         "# FY2026 HRRP penalty estimate",
         f"_Generated {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by `python -m analysis.penalty_report`. "
         "Method and assumptions: [penalty_method.md](penalty_method.md). "
-        f"Data-quality assertions failing: {failed}._",
+        f"Data-quality assertions failing: {failed}; warnings: {warned} "
+        "([data_quality_report.md](data_quality_report.md))._",
         "## National", md_table(con, "SELECT * FROM analysis.national"),
         "### Uncertainty: 90% interval for the national total", interval_block("national"),
         "## Check against CMS",
