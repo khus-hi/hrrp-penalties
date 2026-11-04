@@ -324,7 +324,7 @@ def main():
         "90% interval, same hospitals": same.apply(fmt_iv, axis=1),
         "contains point": same.interval_contains_point,
         "90% interval, all penalized hospitals": table.apply(fmt_iv, axis=1),
-        "median, all penalized": table.p50_usd})
+        "mean, all penalized": table.mc_mean_usd})
     cols = list(show.columns)
     contains_all = bool(same.interval_contains_point.all())
     snat = same[same.level == "national"].iloc[0]
@@ -346,7 +346,8 @@ def main():
            if contains_all else
            "**At least one interval over these hospitals does not contain its point estimate**; see the table.")
         + f"\n- **All penalized hospitals:** 90% interval **${nat.p5_usd / 1e6:,.1f}M to ${nat.p95_usd / 1e6:,.1f}M** "
-        f"(median ${nat.p50_usd / 1e6:,.1f}M). This adds the {len(pen_missing)} hospitals CMS penalized that have no "
+        f"(mean ${nat.mc_mean_usd / 1e6:,.1f}M; the median is not quoted because the draws have two modes, one per "
+        "payment-base source, and the median jumps between them). This adds the {len(pen_missing)} hospitals CMS penalized that have no "
         f"usable cost-report base (alone they add ${(miss.p5_usd - nat.point_estimate_usd) / 1e6:,.1f}M to "
         f"${(miss.p95_usd - nat.point_estimate_usd) / 1e6:,.1f}M), so its low end can sit above the point estimate: "
         "the point estimate leaves those hospitals at $0.\n"
@@ -400,7 +401,7 @@ def main():
         "Condition totals with the drift resampled, base held at the cost report (5th to 95th percentile):",
         md(sens, money=tuple(c for c in sens.columns if c != "condition")),
         "### National, by condition, by chain",
-        md(show[cols], money=("point_estimate_usd", "median, all penalized")),
+        md(show[cols], money=("point_estimate_usd", "mean, all penalized")),
         "### Which input drives the width (national total, one input varied at a time)",
         md(comps, money=("p5_usd", "p95_usd", "width_usd")),
         "## What this does not cover",
@@ -414,7 +415,7 @@ def main():
         *(f"> {v}\n" for v in sa.snippets.values()),
     ]
     REPORT.write_text("\n\n".join(parts) + "\n")
-    print(md(show[cols], money=("point_estimate_usd", "median, all penalized")))
+    print(md(show[cols], money=("point_estimate_usd", "mean, all penalized")))
     print(f"Report: {REPORT}")
 
 

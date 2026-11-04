@@ -120,7 +120,7 @@ def test_real_interval_contains_published_point_estimate():
     """Like for like: the interval over the hospitals the point estimate covers must contain it.
 
     The all-penalized-hospitals interval also gives a base to penalized hospitals with none, so
-    it can only shift up; it is checked to sit at or above the like-for-like interval instead.
+    it can only shift up; its mean is checked to be no lower, up to Monte Carlo noise.
     """
     t = pd.read_csv(OUTPUT)
     same = t[t.population == "same hospitals as the point estimate"]
@@ -130,4 +130,6 @@ def test_real_interval_contains_published_point_estimate():
     assert bad.empty, f"point estimate outside the 90% interval:\n{bad.to_string(index=False)}"
     m = same.merge(full, on=["level", "name"], suffixes=("_same", "_full"))
     assert len(m) == len(same)
-    assert (m.p50_usd_full >= m.p50_usd_same - 1).all()
+    # Imputation only adds dollars in expectation; the two runs use different random draws, so allow
+    # Monte Carlo noise (the real run showed a $289 dip in one chain's mean with no missing hospitals).
+    assert (m.mc_mean_usd_full >= m.mc_mean_usd_same * (1 - 0.005)).all()
