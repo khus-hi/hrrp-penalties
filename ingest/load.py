@@ -183,6 +183,82 @@ def map_ipps_table(con, source: str, folder: Path, wanted_conditions: bool):
     con.executemany("INSERT INTO raw.column_mapping_log VALUES (?, ?, ?, ?)", log)
 
 
+# ---------- FY2026 IPPS final rule Impact File (payment-base cross-check) ----------------
+# The Impact File is CMS's hospital-level simulation of FY2026 IPPS payments: one row
+# per hospital with the inputs CMS uses (FY2024 MedPAR claim volume, case mix, FY2026
+# wage index). We need five of its columns. They are matched by pattern like the HRRP
+# spreadsheets above; the first pattern that hits wins, so the list is in order of
+# preference (transfer-adjusted cases before raw bills, for example). A miss is NULL.
+_WI_EXCLUDE = (r"pre.?(reclass|floor)|before|without|w/?o|prior|fy.?20?25|fy25|old|capital|gaf|cbsa|"
+               r"transition|average|hourly")
+IMPACT_FIELDS = {
+    "ccn": [(r"provider.?(number|id|ccn)|\bccn\b|^provider$|^prov", None)],
+    # Transfer-adjusted cases: CMS's count of FY2024 discharges with post-acute
+    # transfers counted as partial cases (the volume IPPS pays on).
+    # FY2026 file names them CASETA42 / CASETA43 (one per MS-DRG grouper version); the
+    # highest version is FY2026's grouper (v43). IME_ variants are the IME-only subset.
+    "transfer_adjusted_cases": [(r"^caseta\d*$|tacases|transfer.?adj\w*.?cases|^tac$", r"ime")],
+    "bills": [(r"\bbills?\b", None)],
+    # Transfer-adjusted case-mix index (average MS-DRG weight); plain CMI as fallback.
+    "case_mix_index": [(r"tacmi|transfer.?adj\w*.?(cmi|case.?mix)", r"ime"),
+                       (r"\bcmi|case.?mix", r"capital|ime")],
+    # Wage index used for FY2026 operating payments. Excludes prior-year, pre-
+    # reclassification and capital (GAF) columns.
+    "wage_index": [(r"(final|post|payment).*wage.?index|wage.?index.*(final|post|payment)", _WI_EXCLUDE),
+                   (r"wage.?index|\bwi\b|^wi_|_wi$|^wi\d", _WI_EXCLUDE)],
+    "cola": [(r"\bcola\b|cost.?of.?living", r"capital")],
+    # CMS's own HRRP factor in the Impact File: used only to check the CCN join.
+    "readmissions_adjustment_factor": [(r"readm|\bhrr", r"vbp|value")],
+}
+
+
+def _version(col: str) -> int:
+    """Trailing number of a column name (TACMIV43 -> 43), 0 if none."""
+    m = re.search(r"(\d+)\s*$", str(col))
+    return int(m.group(1)) if m else 0
+
+
+def load_ipps_impact(con):
+    """raw.ipps_impact (mapped columns, all text) and raw.ipps_impact_original (untouched).
+
+    Optional: if the zip isn't in data/raw/ipps_impact_file/ the step is skipped with a
+    message, because nothing else in the pipeline depends on it.
+    """
+    folder = C.RAW / "ipps_impact_file"
+    if not folder.exists() or not any(folder.rglob("*")):
+        print("  ipps_impact_file: not downloaded, skipped (python -m ingest.download fetches it)")
+        return
+    best = None
+    for label, raw in read_tables(folder):
+        h = find_header_row(raw)
+        if h is None:
+            continue
+        df = raw.iloc[h + 1:].copy()
+        df.columns = [str(c).strip() for c in raw.iloc[h].tolist()]
+        df = df.loc[:, [c for c in df.columns if c and c.lower() != "nan"]].dropna(how="all")
+        if best is None or len(df.columns) > len(best[1].columns):
+            best = (label, df)
+    if best is None:
+        print(f"  ipps_impact_file: no sheet with a provider-number column in {folder}; skipped")
+        return
+    label, df = best
+    print(f"  ipps_impact_file: using {label}; {len(df):,} rows; columns = {list(df.columns)}")
+    load_df(con, "raw.ipps_impact_original", df)
+    log, out = [], pd.DataFrame(index=df.index)
+    for name, patterns in IMPACT_FIELDS.items():
+        hits = []
+        for inc, exc in patterns:
+            # Several grouper versions (TACMIV42, TACMIV43): highest version number first.
+            hits = sorted(match(df.columns, inc, exc), key=_version, reverse=True)
+            if hits:
+                break
+        out[name] = df[hits[0]] if hits else pd.NA
+        log.append(("ipps_impact", name, hits[0] if hits else None, "; ".join(hits)))
+    out["source_sheet"] = label
+    load_df(con, "raw.ipps_impact", out)
+    con.executemany("INSERT INTO raw.column_mapping_log VALUES (?, ?, ?, ?)", log)
+
+
 # ---------- SEC companyfacts JSON -> long table -----------------------------------------
 def load_sec(con):
     rows = []
@@ -356,6 +432,7 @@ def main():
             read_csv_text(only_file(C.RAW / "hospital_general_info", "*.csv")))
     map_ipps_table(con, "hrrp_supplemental", C.RAW / "hrrp_supplemental", wanted_conditions=True)
     map_ipps_table(con, "hrrp_table15", C.RAW / "hrrp_table15", wanted_conditions=False)
+    load_ipps_impact(con)
 
     for name in C.CMS_API_DATASETS:
         df = pd.read_json(C.RAW / name / f"{name}.jsonl", lines=True, dtype=str)
