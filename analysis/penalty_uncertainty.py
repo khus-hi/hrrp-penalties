@@ -14,8 +14,9 @@ Writes
 Interview version: the penalty factor is CMS's exact number, so the uncertainty is in the
 dollar base. We have two official but different measures of that base (the hospital's own
 cost report and CMS's Impact File), so we measure how far apart they are, then let a
-Monte Carlo resample those observed gaps (plus the observed drift in CMS's DRG payment
-ratios, plus imputed bases for penalized hospitals with none) and read off a 90% interval.
+Monte Carlo resample those observed gaps (plus imputed bases for penalized hospitals with
+none) and read off a 90% interval. Drift in CMS's DRG payment ratios is run separately as a
+sensitivity, because its effect on the condition split flips with how the noise is centred.
 The method and every choice are in hrrp/uncertainty.py and the report.
 """
 from __future__ import annotations
@@ -129,7 +130,7 @@ def load_drift(con) -> tuple[dict, pd.DataFrame, int | None]:
         # Centred (average multiplier 1): the spread across hospitals is the noise we resample. The median shift is a
         # trend (e.g. hip/knee surgery moving to outpatient), and applying it would be a forecast,
         # so it is reported, not applied.
-        pools[c] = U.mean_one(x)
+        pools[c] = x  # raw (trimmed) log drift; centred where it is used
         if len(x):
             q = np.exp(np.percentile(x, [5, 50, 95]))
             rows.append({"condition": c, "hospitals": len(x), "ratio_change_p5": q[0], "median (trend, not applied)": q[1],
@@ -267,8 +268,12 @@ def main():
     # like-for-like check is an interval over those same hospitals. The headline interval also gives a
     # base to penalized hospitals that have none, which can only add dollars.
     labels = {"ami": "AMI", "hf": "Heart failure", "pn": "Pneumonia", "copd": "COPD", "cabg": "CABG", "tha_tka": "Hip/knee"}
-    draws = U.simulate(inp, N_DRAWS, SEED)
-    draws_same = U.simulate(inp, N_DRAWS, SEED, impute_missing=False)
+    # DRG ratio drift is NOT in the intervals. Perturbing ratios and renormalising shares moves
+    # dollars between conditions in a direction set by how the noise is centred (median vs
+    # mean 1 gave opposite shifts on the real data), not by the data. It is reported below as
+    # a sensitivity instead; the split inside the intervals is CMS's own arithmetic.
+    draws = U.simulate(inp, N_DRAWS, SEED, vary_ratios=False)
+    draws_same = U.simulate(inp, N_DRAWS, SEED, vary_ratios=False, impute_missing=False)
     table = pd.concat([U.interval_table(draws, point).assign(population=ALL_POP),
                        U.interval_table(draws_same, point).assign(population=SAME_POP)], ignore_index=True)
     table["name"] = table.name.map(lambda n: labels.get(n, n))
@@ -277,15 +282,25 @@ def main():
     table = table[table.population == ALL_POP].reset_index(drop=True)
 
     comps = []
-    for label, kw in [("All three inputs", {}),
+    for label, kw in [("Both inputs", {}),
                       ("Payment base only", {"vary_ratios": False, "impute_missing": False}),
-                      ("DRG payment ratios only", {"vary_base": False, "impute_missing": False}),
                       ("Penalized hospitals with no base only", {"vary_base": False, "vary_ratios": False})]:
         d = draws if not kw else U.simulate(inp, N_DRAWS, SEED, **kw)
         lo, hi = np.percentile(d["national"], [5, 95])
         comps.append({"inputs varied": label, "p5_usd": lo, "p95_usd": hi, "width_usd": hi - lo})
     comps = pd.DataFrame(comps)
     comps.to_csv(OUT / "penalty_interval_components.csv", index=False)
+
+    # Sensitivity: condition split under observed DRG ratio drift, two ways of centring the noise.
+    sens = pd.DataFrame({"condition": [labels[c] for c in U.CONDITIONS],
+                         "point_estimate_usd": [point[f"condition:{c}"][0] for c in U.CONDITIONS]})
+    if drift:
+        for tag, centre in [("median-centred", lambda x: x - np.median(x)), ("mean-1", U.mean_one)]:
+            alt = U.MCInputs(**{**inp.__dict__, "drift": {c: centre(x) for c, x in drift.items() if len(x)}})
+            d = U.simulate(alt, N_DRAWS, SEED, vary_base=False, impute_missing=False)
+            sens[f"{tag}: p5"] = [np.percentile(d[f"condition:{c}"], 5) for c in U.CONDITIONS]
+            sens[f"{tag}: p95"] = [np.percentile(d[f"condition:{c}"], 95) for c in U.CONDITIONS]
+    sens.to_csv(OUT / "penalty_ratio_drift_sensitivity.csv", index=False)
 
     nat = table[table.level == "national"].iloc[0]
     fig_national(draws["national"], nat.point_estimate_usd, nat.p5_usd, nat.p95_usd, FIG / "national_interval.png")
@@ -360,7 +375,8 @@ def main():
         "Penalty totals under each base:",
         md(world_totals, money=("total_usd",)),
         "## 2. Monte Carlo",
-        "Three inputs are uncertain. Every distribution is resampled from observed data:",
+        "Two inputs go into the interval (DRG ratios are a separate sensitivity, below). Every distribution is "
+        "resampled from observed data:",
         "| Input | What is drawn | Where the distribution comes from |\n|---|---|---|\n"
         "| Payment base, level | Each draw uses the cost-report level or the Impact File level, 50/50 | The two "
         "sources differ systematically (different years and rates) and neither is FY2026 actuals, so the choice "
@@ -369,14 +385,20 @@ def main():
         f"ln(Impact/cost report) for {len(log_gap):,} hospitals, divided by sqrt(2) and shifted so the average multiplier is 1 "
         f"(equal noise in each source). Gaps outside the 1st-99th percentile ({np.exp(cut_lo):.2f}x to "
         f"{np.exp(cut_hi):.2f}x) are left out of the pool as likely data errors. |\n"
-        f"| DRG payment ratios | Each hospital-condition ratio x a resampled drift | Observed change in the same "
-        f"hospital's ratio from CMS's FY{drift_base} file to FY2026, per condition, trimmed at p1/p99 and shifted so "
-        "the average multiplier is 1: the spread is resampled, the median trend is shown below but not applied (applying it would "
-        "be a forecast). The factor stays CMS's, so this only moves dollars between conditions. |\n"
+
         f"| Penalized hospitals with no usable base ({len(pen_missing)}) | A base for each | The other source's base "
         "x a resampled gap; with neither source, the base of a random hospital in the same bed-size fifth. |\n",
+        "### DRG payment ratios: a sensitivity, not part of the interval",
+        f"The ratios only split each hospital's dollars across conditions (CMS's factor is fixed). We measured how "
+        f"much each hospital's ratio changed between CMS's FY{drift_base} and FY2026 files and re-ran the split with "
+        "that drift resampled. Because shares are renormalised, the result depends on how the noise is centred: "
+        "median-centred noise pushes noisy conditions up, mean-1 noise pushes them down, by similar amounts. A "
+        "result that flips with a convention is not something the data pins down, so the drift is shown here and "
+        "kept out of the 90% intervals, whose condition split is CMS's own arithmetic.",
         "Observed drift in DRG payment ratios (FY2026 ratio / earlier ratio):",
         md(drift_tbl, ratio=("ratio_change_p5", "median (trend, not applied)", "p95", "trimmed_below", "trimmed_above")) if len(drift_tbl) else "_Panel not built: ratios held at CMS's values._\n",
+        "Condition totals with the drift resampled, base held at the cost report (5th to 95th percentile):",
+        md(sens, money=tuple(c for c in sens.columns if c != "condition")),
         "### National, by condition, by chain",
         md(show[cols], money=("point_estimate_usd", "median, all penalized")),
         "### Which input drives the width (national total, one input varied at a time)",

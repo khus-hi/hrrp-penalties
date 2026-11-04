@@ -5,8 +5,9 @@ The point estimate is
     penalty_i = (1 - CMS payment adjustment factor_i) x base_i
 
 The factor is CMS's exact number, so all uncertainty sits in the dollar base and in how
-a hospital's dollars are split across conditions. Three inputs are drawn here, and every
-distribution is resampled from observed data (no assumed shapes):
+a hospital's dollars are split across conditions. Three inputs can be drawn here, and every
+distribution is resampled from observed data (no assumed shapes). The analysis script puts
+1 and 3 in the 90% interval and runs 2 only as a sensitivity (see its report for why):
 
 1. Payment base: cost report (HCRIS, 2024-25 actual payments) vs the FY2026 IPPS Impact
    File (CMS's FY2026 rates applied to FY2024 claim volume). Each draw first picks which
