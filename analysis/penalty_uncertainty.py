@@ -347,7 +347,7 @@ def main():
            "**At least one interval over these hospitals does not contain its point estimate**; see the table.")
         + f"\n- **All penalized hospitals:** 90% interval **${nat.p5_usd / 1e6:,.1f}M to ${nat.p95_usd / 1e6:,.1f}M** "
         f"(mean ${nat.mc_mean_usd / 1e6:,.1f}M; the median is not quoted because the draws have two modes, one per "
-        "payment-base source, and the median jumps between them). This adds the {len(pen_missing)} hospitals CMS penalized that have no "
+        f"payment-base source, and the median jumps between them). This adds the {len(pen_missing)} hospitals CMS penalized that have no "
         f"usable cost-report base (alone they add ${(miss.p5_usd - nat.point_estimate_usd) / 1e6:,.1f}M to "
         f"${(miss.p95_usd - nat.point_estimate_usd) / 1e6:,.1f}M), so its low end can sit above the point estimate: "
         "the point estimate leaves those hospitals at $0.\n"

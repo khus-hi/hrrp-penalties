@@ -7,7 +7,7 @@ _Generated 2026-11-04 02:24 UTC by `python -m analysis.penalty_uncertainty` (10,
 National FY2026 HRRP penalty: point estimate **$315.6M** (2,900 hospitals with a usable cost-report base).
 
 - **Same hospitals as the point estimate:** 90% interval $314.6M to $335.7M. Every interval over these hospitals contains its point estimate (national, conditions, chains).
-- **All penalized hospitals:** 90% interval **$316.1M to $337.3M** (mean $326.6M; the median is not quoted because the draws have two modes, one per payment-base source, and the median jumps between them). This adds the {len(pen_missing)} hospitals CMS penalized that have no usable cost-report base (alone they add $1.4M to $3.4M), so its low end can sit above the point estimate: the point estimate leaves those hospitals at $0.
+- **All penalized hospitals:** 90% interval **$316.1M to $337.3M** (mean $326.6M; the median is not quoted because the draws have two modes, one per payment-base source, and the median jumps between them). This adds the 23 hospitals CMS penalized that have no usable cost-report base (alone they add $1.4M to $3.4M), so its low end can sit above the point estimate: the point estimate leaves those hospitals at $0.
 - **Direction:** across hospitals with both bases, the Impact File total is 1.051x the cost-report total (section 1), so the published point estimate is more likely low than high.
 
 ![national interval](figures/uncertainty/national_interval.png)

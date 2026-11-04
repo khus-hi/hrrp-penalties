@@ -7,8 +7,10 @@
 
 📄 **Read the findings report: [khus-hi.github.io/hrrp-penalties](https://khus-hi.github.io/hrrp-penalties/)** (question, data, methods, results, threats to validity, and what to do with it).
 
+<!-- Dashboard screenshot: save a screenshot of the "1. National" Tableau dashboard as docs/figures/dashboard.png,
+     then replace this comment with:
 ![Tableau dashboard: national map of estimated HRRP penalties](docs/figures/dashboard.png)
-<!-- Screenshot placeholder: save a screenshot of the "1. National" dashboard as docs/figures/dashboard.png -->
+-->
 
 **Problem:** Medicare's Hospital Readmissions Reduction Program (HRRP) cuts up to 3% of a hospital's base inpatient payments when readmissions for six conditions are worse than expected. CMS publishes each cut as a factor like 0.9950, never in dollars, and never says whether the cut changes what hospitals do. Everything here comes from live CMS, Census and SEC data: no Kaggle, no synthetic numbers.
 
@@ -26,7 +28,7 @@
 | Output | What it's for | Where |
 |---|---|---|
 | **Findings report** (Quarto → HTML) | The written story: question, methods, results with figures, threats to validity, recommendations | [GitHub Pages](https://khus-hi.github.io/hrrp-penalties/) · source [report/hrrp.qmd](report/hrrp.qmd) |
-| **Tableau Public dashboards** | Explore any hospital, state or condition: five linked dashboards | [dashboard/](dashboard/) · [build guide](docs/tableau_build_guide.md) |
+| **Tableau Public dashboards** | Explore any hospital, state or condition: five linked dashboards | [National](https://public.tableau.com/views/1_National/1_National) · [Hospital lookup](https://public.tableau.com/views/2_HospitalLookup/2_HospitalLookup) · [Conditions](https://public.tableau.com/views/3_Conditions/3_Conditions) · [Massachusetts](https://public.tableau.com/views/4_Massachusetts/4_Massachusetts) · [Parent systems](https://public.tableau.com/views/5_ParentSystems/5_ParentSystems) · data exports in [dashboard/](dashboard/) · [build guide](docs/tableau_build_guide.md) |
 | **Excel workbook** | Chain finance: penalty vs 10-K income, scenarios, care-transitions ROI, all live formulas | [hrrp_chain_workbook.xlsx](analysis/output/hrrp_chain_workbook.xlsx) · [guide](docs/workbook_guide.md) |
 | **Causal analysis** | Regression discontinuity and Cures Act event study | [rd_report.md](docs/rd_report.md) · [did_report.md](docs/did_report.md) |
 | **Method reports** | Penalty dollars, uncertainty, ERR model, data quality | [docs/](docs/) |
@@ -34,7 +36,7 @@
 
 ## For analysts / For data scientists
 
-**For analysts** (business, healthcare, finance): start with the [findings report](https://khus-hi.github.io/hrrp-penalties/). Then look up one hospital in the Tableau dashboards or in [hospital_penalty.csv](analysis/output/hospital_penalty.csv), which has each hospital's dollars and condition split. For the chain finance view, open the [Excel workbook](analysis/output/hrrp_chain_workbook.xlsx) and change the yellow input cells. The [penalty report](docs/penalty_report.md) has the national, state and ownership tables.
+**For analysts** (business, healthcare, finance): start with the [findings report](https://khus-hi.github.io/hrrp-penalties/). Then look up one hospital in the [Hospital lookup dashboard](https://public.tableau.com/views/2_HospitalLookup/2_HospitalLookup) or in [hospital_penalty.csv](analysis/output/hospital_penalty.csv), which has each hospital's dollars and condition split. For the chain finance view, open the [Excel workbook](analysis/output/hrrp_chain_workbook.xlsx) and change the yellow input cells. The [penalty report](docs/penalty_report.md) has the national, state and ownership tables.
 
 **For data scientists**: the causal designs are in [hrrp/causal/rd.py](hrrp/causal/rd.py) and [hrrp/causal/did.py](hrrp/causal/did.py). Their reports ([RD](docs/rd_report.md), [event study](docs/did_report.md)) list every robustness check. The Monte Carlo is in [hrrp/uncertainty.py](hrrp/uncertainty.py), and the cross-sectional model is in [analysis/err_model.py](analysis/err_model.py), with diagnostics in [err_model_report.md](docs/err_model_report.md). Tests are in [tests/](tests/), and that folder includes simulated panels with a planted effect, to check that the estimators recover it. The data pipeline is in [dbt/](dbt/), with the data tests summarised in the [data quality report](docs/data_quality_report.md).
 
