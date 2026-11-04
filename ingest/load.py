@@ -195,19 +195,27 @@ IMPACT_FIELDS = {
     "ccn": [(r"provider.?(number|id|ccn)|\bccn\b|^provider$|^prov", None)],
     # Transfer-adjusted cases: CMS's count of FY2024 discharges with post-acute
     # transfers counted as partial cases (the volume IPPS pays on).
-    "transfer_adjusted_cases": [(r"tacases|transfer.?adj\w*.?cases|^tac$", None)],
+    # FY2026 file names them CASETA42 / CASETA43 (one per MS-DRG grouper version); the
+    # highest version is FY2026's grouper (v43). IME_ variants are the IME-only subset.
+    "transfer_adjusted_cases": [(r"^caseta\d*$|tacases|transfer.?adj\w*.?cases|^tac$", r"ime")],
     "bills": [(r"\bbills?\b", None)],
     # Transfer-adjusted case-mix index (average MS-DRG weight); plain CMI as fallback.
-    "case_mix_index": [(r"tacmi|transfer.?adj\w*.?(cmi|case.?mix)", None),
-                       (r"\bcmi|case.?mix", r"capital")],
+    "case_mix_index": [(r"tacmi|transfer.?adj\w*.?(cmi|case.?mix)", r"ime"),
+                       (r"\bcmi|case.?mix", r"capital|ime")],
     # Wage index used for FY2026 operating payments. Excludes prior-year, pre-
     # reclassification and capital (GAF) columns.
     "wage_index": [(r"(final|post|payment).*wage.?index|wage.?index.*(final|post|payment)", _WI_EXCLUDE),
                    (r"wage.?index|\bwi\b|^wi_|_wi$|^wi\d", _WI_EXCLUDE)],
-    "cola": [(r"\bcola\b|cost.?of.?living", None)],
+    "cola": [(r"\bcola\b|cost.?of.?living", r"capital")],
     # CMS's own HRRP factor in the Impact File: used only to check the CCN join.
     "readmissions_adjustment_factor": [(r"readm|\bhrr", r"vbp|value")],
 }
+
+
+def _version(col: str) -> int:
+    """Trailing number of a column name (TACMIV43 -> 43), 0 if none."""
+    m = re.search(r"(\d+)\s*$", str(col))
+    return int(m.group(1)) if m else 0
 
 
 def load_ipps_impact(con):
@@ -240,7 +248,8 @@ def load_ipps_impact(con):
     for name, patterns in IMPACT_FIELDS.items():
         hits = []
         for inc, exc in patterns:
-            hits = match(df.columns, inc, exc)
+            # Several grouper versions (TACMIV42, TACMIV43): highest version number first.
+            hits = sorted(match(df.columns, inc, exc), key=_version, reverse=True)
             if hits:
                 break
         out[name] = df[hits[0]] if hits else pd.NA

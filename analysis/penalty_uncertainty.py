@@ -124,10 +124,13 @@ def load_drift(con) -> tuple[dict, pd.DataFrame, int | None]:
     pools, rows = {}, []
     for c in U.CONDITIONS:
         x, lo, hi = U.trimmed(j.loc[j.condition == c, "log_drift"])
-        pools[c] = x
+        # Centred: the spread across hospitals is the noise we resample. The median shift is a
+        # trend (e.g. hip/knee surgery moving to outpatient), and applying it would be a forecast,
+        # so it is reported, not applied.
+        pools[c] = x - np.median(x) if len(x) else x
         if len(x):
             q = np.exp(np.percentile(x, [5, 50, 95]))
-            rows.append({"condition": c, "hospitals": len(x), "ratio_change_p5": q[0], "median": q[1],
+            rows.append({"condition": c, "hospitals": len(x), "ratio_change_p5": q[0], "median (trend, not applied)": q[1],
                          "p95": q[2], "trimmed_below": np.exp(lo), "trimmed_above": np.exp(hi)})
     return pools, pd.DataFrame(rows), base
 
@@ -202,6 +205,9 @@ def main():
     hosp["if_base"] = np.nan
     join_check = pd.DataFrame()
     if impact is not None and sa is not None:
+        if impact.transfer_adjusted_cases.isna().all():
+            print("WARNING: no transfer-adjusted cases column matched; falling back to raw Bills, which overstates "
+                  "the Impact File base. Check the column mapping in ingest/load.py.")
         cases = impact.transfer_adjusted_cases.where(impact.transfer_adjusted_cases.notna(), impact.bills)
         impact["if_base"] = U.impact_base(cases, impact.case_mix_index, impact.wage_index, impact.cola, sa)
         impact.loc[~(impact.if_base > 0), "if_base"] = np.nan
@@ -316,7 +322,7 @@ def main():
         sa_block,
         "Impact File columns used (matched by pattern in `ingest/load.py`; check these are the right ones):",
         md(mapping),
-        "CCN join check (CMS's HRRP factor appears in both files; they should agree):",
+        "CCN join check. The Impact File carries a *proxy* readmissions factor (CMS's estimate when it built the file), so not every hospital has to match the final factor; a high match rate shows the CCNs line up:",
         md(join_check),
         "Gap = Impact File base / cost-report base (1.0 = the two agree):",
         md(gap[["group", "hospitals", "p5", "p25", "p50", "p75", "p95", "share_within_10pct", "share_within_25pct",
@@ -339,12 +345,13 @@ def main():
         f"(equal noise in each source). Gaps outside the 1st-99th percentile ({np.exp(cut_lo):.2f}x to "
         f"{np.exp(cut_hi):.2f}x) are left out of the pool as likely data errors. |\n"
         f"| DRG payment ratios | Each hospital-condition ratio x a resampled drift | Observed change in the same "
-        f"hospital's ratio from CMS's FY{drift_base} file to FY2026, per condition, trimmed at p1/p99. The factor "
-        "stays CMS's, so this only moves dollars between conditions. |\n"
+        f"hospital's ratio from CMS's FY{drift_base} file to FY2026, per condition, trimmed at p1/p99 and centred on "
+        "its median: the spread is resampled, the median trend is shown below but not applied (applying it would "
+        "be a forecast). The factor stays CMS's, so this only moves dollars between conditions. |\n"
         f"| Penalized hospitals with no usable base ({len(pen_missing)}) | A base for each | The other source's base "
         "x a resampled gap; with neither source, the base of a random hospital in the same bed-size fifth. |\n",
         "Observed drift in DRG payment ratios (FY2026 ratio / earlier ratio):",
-        md(drift_tbl, ratio=("ratio_change_p5", "median", "p95", "trimmed_below", "trimmed_above")) if len(drift_tbl) else "_Panel not built: ratios held at CMS's values._\n",
+        md(drift_tbl, ratio=("ratio_change_p5", "median (trend, not applied)", "p95", "trimmed_below", "trimmed_above")) if len(drift_tbl) else "_Panel not built: ratios held at CMS's values._\n",
         "### National, by condition, by chain",
         md(show[cols], money=("point_estimate_usd", "p50_usd")),
         "### Which input drives the width (national total, one input varied at a time)",
