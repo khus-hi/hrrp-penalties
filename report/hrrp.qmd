@@ -380,7 +380,7 @@ These are associations. CMS already compares each hospital only with its dual-el
 
 **For a hospital quality or finance lead**
 
-- Find your own dollars and condition split in the Tableau dashboards or in `analysis/output/hospital_penalty.csv`: the penalty is concentrated, so one or two conditions usually drive it.
+- Find your own dollars and condition split in the [Hospital lookup dashboard](https://public.tableau.com/views/2_HospitalLookup/2_HospitalLookup) (Tableau Public) or in `analysis/output/hospital_penalty.csv`: the penalty is concentrated, so one or two conditions usually drive it.
 - Judge readmission programs on their clinical and margin case, not on penalty avoided. For the large chains the penalty is `{python} f"{min(100 * sysd.loc[ch, 'est_total_penalty_usd'] / sec.loc[ch, 'op_income'] for ch in CHAINS):.2f}"`% to `{python} f"{max(100 * sysd.loc[ch, 'est_total_penalty_usd'] / sec.loc[ch, 'op_income'] for ch in CHAINS):.2f}"`% of operating income, and the workbook's ROI sheet shows an all-patients care-transitions program does not pay for itself on the penalty alone; targeting high-risk patients is the only way it breaks even.
 - Because you're compared with peers of similar dual share, small differences around the median decide whether you're penalized at all; your distance from the median per condition matters more than the national ERR of 1.0.
 - If you serve many dual-eligible patients, expect higher ERRs than CMS's clinical risk adjustment predicts; peer grouping offsets part of that, but not all.
