@@ -18,19 +18,20 @@
   {{ return({
       'err':                 ['(^|_)err(_|$)|excess_readmission_ratio', 'median|peer'],
       'peer_median_err':     ['median', none],
-      'eligible_discharges': ['discharge|number_of_(eligible|cases)', 'readmission'],
+      'eligible_discharges': ['discharge|number_of_(eligible|cases)|^number_of_.*_cases$', 'readmission'],
       'penalty_indicator':   ['penalty_indicator|penalized', none],
       'drg_payment_ratio':   ['payment_ratio|drg_payment|ratio_of_(base|drg)', 'excess_readmission'],
   }) }}
 {%- endmacro %}
 
-{#- The six HRRP conditions, as they appear inside column names -#}
+{#- The six HRRP conditions, as they appear inside column names. "pneumoni" also catches the
+    FY2017 file's typo "pneumoniuia"; FY2016-FY2018 spell COPD out as chronic_obstructive_... -#}
 {% macro hrrp_conditions() -%}
   {{ return({
       'ami':     '(^|_)ami(_|$)|myocardial',
       'hf':      '(^|_)hf(_|$)|heart_failure',
-      'pn':      '(^|_)pn(_|$)|pneumonia',
-      'copd':    'copd',
+      'pn':      '(^|_)pn(_|$)|pneumoni',
+      'copd':    'copd|chronic_obstructive',
       'cabg':    'cabg|bypass',
       'tha_tka': '(^|_)(tha|tka|thatka|tha_tka|hip|knee|hipknee)(_|$)',
   }) }}

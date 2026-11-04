@@ -13,7 +13,10 @@ SELECT
     TRY_CAST({{ to_num(harmonized(rel, 'supplemental', 'peer_group')) }} AS INT) AS peer_group,
     {{ to_num(harmonized(rel, 'supplemental', 'neutrality_modifier')) }}       AS neutrality_modifier
 {%- for c in conds %},
-    {{ to_num(harmonized(rel, 'supplemental', 'err', c)) }}                 AS err_{{ c }},
+    -- FY2016-FY2017 files put 0 where a hospital has no ERR (too few cases); an ERR is
+    -- predicted / expected readmissions, so 0 is never a real value. Checked by
+    -- assert_panel_zero_err_means_few_cases.
+    nullif({{ to_num(harmonized(rel, 'supplemental', 'err', c)) }}, 0)     AS err_{{ c }},
     {{ to_num(harmonized(rel, 'supplemental', 'peer_median_err', c)) }}     AS peer_median_err_{{ c }},
     {{ to_num(harmonized(rel, 'supplemental', 'eligible_discharges', c)) }} AS eligible_discharges_{{ c }},
     {{ to_num(harmonized(rel, 'supplemental', 'drg_payment_ratio', c)) }}   AS drg_payment_ratio_{{ c }},
