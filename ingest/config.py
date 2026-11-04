@@ -43,7 +43,7 @@ FILES = {
     },
     "ipps_impact_file": {
         "url": "https://www.cms.gov/files/zip/fy2026-ipps-fr-impact-file.zip",
-        "verified": "link on FY2026 IPPS final rule page; downloaded for reference, not modelled yet",
+        "verified": "link on FY2026 IPPS final rule page; loaded to raw.ipps_impact for the payment-base cross-check",
     },
     # Full text of the FY2026 IPPS final rule (Federal Register 2025-14681), linked from
     # the CMS FY2026 IPPS final rule page. Used only to quote CMS's own HRRP estimates.
