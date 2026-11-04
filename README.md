@@ -7,8 +7,10 @@
 
 📄 **Read the findings report: [khus-hi.github.io/hrrp-penalties](https://khus-hi.github.io/hrrp-penalties/)** (question, data, methods, results, threats to validity, and what to do with it).
 
+<!-- Dashboard screenshot: save a screenshot of the "1. National" Tableau dashboard as docs/figures/dashboard.png,
+     then replace this comment with:
 ![Tableau dashboard: national map of estimated HRRP penalties](docs/figures/dashboard.png)
-<!-- Screenshot placeholder: save a screenshot of the "1. National" dashboard as docs/figures/dashboard.png -->
+-->
 
 **Problem:** Medicare's Hospital Readmissions Reduction Program (HRRP) cuts up to 3% of a hospital's base inpatient payments when readmissions for six conditions are worse than expected. CMS publishes each cut as a factor like 0.9950, never in dollars, and never says whether the cut changes what hospitals do. Everything here comes from live CMS, Census and SEC data: no Kaggle, no synthetic numbers.
 
