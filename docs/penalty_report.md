@@ -1,6 +1,6 @@
 # FY2026 HRRP penalty estimate
 
-_Generated 2026-11-02 18:00 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 0._
+_Generated 2026-11-04 02:24 UTC by `python -m analysis.penalty_report`. Method and assumptions: [penalty_method.md](penalty_method.md). Data-quality assertions failing: 1._
 
 ## National
 
@@ -8,6 +8,14 @@ _Generated 2026-11-02 18:00 UTC by `python -m analysis.penalty_report`. Method a
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 3055 | 2937 | 2302 | 78.4 | 15 | 0.9966 | 2900 | 23 | 315,602,534 | 52,443 | 5,846,204 | 85,706,654,970 |
 
+
+### Uncertainty: 90% interval for the national total
+
+| | Point estimate | 90% interval, same hospitals | Contains point | 90% interval, all penalized hospitals |
+|---|---|---|---|---|
+| national | $315.6M | $314.6M to $335.7M | yes | $316.1M to $337.3M |
+
+"Same hospitals" covers only hospitals with a usable cost-report base, like the point estimate. "All penalized hospitals" also estimates a base for the penalized hospitals that have none, so it sits higher. Method: [penalty_uncertainty.md](penalty_uncertainty.md).
 
 ## Check against CMS
 
@@ -62,6 +70,19 @@ _Searched 2025-14681.htm: 4,485,518 characters, 117 HRRP mentions, 1 with a $ or
 | COPD | 1142 | 15,666,784 | 5 |
 
 
+90% intervals by condition:
+
+| | Point estimate | 90% interval, same hospitals | Contains point | 90% interval, all penalized hospitals |
+|---|---|---|---|---|
+| AMI | $46.1M | $45.9M to $49.4M | yes | $46.1M to $49.6M |
+| Heart failure | $72.3M | $72.0M to $76.4M | yes | $72.5M to $76.9M |
+| Pneumonia | $103.1M | $102.7M to $109.3M | yes | $103.1M to $109.7M |
+| COPD | $15.7M | $15.6M to $16.7M | yes | $15.7M to $16.7M |
+| CABG | $40.1M | $39.8M to $43.4M | yes | $40.0M to $43.6M |
+| Hip/knee | $38.3M | $38.1M to $41.0M | yes | $38.4M to $41.3M |
+
+"Same hospitals" covers only hospitals with a usable cost-report base, like the point estimate. "All penalized hospitals" also estimates a base for the penalized hospitals that have none, so it sits higher. Method: [penalty_uncertainty.md](penalty_uncertainty.md).
+
 ## By parent system
 
 | parent_system | hospitals_in_hrrp_file | with_cms_factor | penalized | pct_penalized | mean_factor | estimable | est_total_penalty_usd | est_avg_penalty_penalized_usd | penalty_pct_of_base_drg |
@@ -72,6 +93,17 @@ _Searched 2025-14681.htm: 4,485,518 characters, 117 HRRP mentions, 1 with a $ or
 | Universal Health Services | 25 | 22 | 21 | 95.5 | 0.9962 | 22 | 3,005,030 | 143,097 | 0.469 |
 | Not one of the four chains | 2774 | 2663 | 2054 | 77.1 | 0.9967 | 2626 | 277,192,667 | 136,481 | 0.369 |
 
+
+90% intervals by chain:
+
+| | Point estimate | 90% interval, same hospitals | Contains point | 90% interval, all penalized hospitals |
+|---|---|---|---|---|
+| HCA Healthcare | $26.1M | $25.9M to $29.1M | yes | $25.9M to $29.1M |
+| Tenet Healthcare | $4.9M | $4.8M to $5.8M | yes | $4.8M to $5.8M |
+| Community Health Systems | $4.4M | $4.3M to $4.9M | yes | $4.3M to $4.9M |
+| Universal Health Services | $3.0M | $2.9M to $3.2M | yes | $2.9M to $3.2M |
+
+"Same hospitals" covers only hospitals with a usable cost-report base, like the point estimate. "All penalized hospitals" also estimates a base for the penalized hospitals that have none, so it sits higher. Method: [penalty_uncertainty.md](penalty_uncertainty.md).
 
 | parent_system | condition | est_penalty_usd |
 |---|---|---|
