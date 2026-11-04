@@ -96,7 +96,7 @@ def load_intervals():
         print(f"No {path.name}: the interval cells stay blank (run python -m analysis.penalty_uncertainty first).")
         return None
     t = pd.read_csv(path)
-    t = t[t.level == "group"]
+    t = t[(t.level == "group") & (t.population == "all penalized hospitals")]
     return {r.name: (float(r.p5_usd), float(r.p95_usd)) for r in t.itertuples(index=False)}
 
 
@@ -204,8 +204,9 @@ def build(hosp, cond, sec, intervals=None):
     # Uncertainty: 90% Monte Carlo interval per chain (rows 25-33), from
     # analysis/output/penalty_interval.csv (python -m analysis.penalty_uncertainty).
     put(inp, "A25", "Uncertainty in the penalty $: 90% Monte Carlo interval", bold=True)
-    put(inp, "C25", "From docs/penalty_uncertainty.md: payment base (cost report vs CMS Impact File), DRG payment "
-                    "ratio drift and penalized hospitals with no base, 10,000 draws. Data, not inputs to edit.")
+    put(inp, "C25", "From docs/penalty_uncertainty.md, all penalized hospitals: payment base (cost report vs CMS Impact "
+                    "File), DRG payment ratio drift and a base for penalized hospitals with none, 10,000 draws. "
+                    "Data, not inputs to edit.")
     interval_rows = {}
     for k, chain in enumerate(CHAINS):
         r_lo, r_hi = 26 + 2 * k, 27 + 2 * k

@@ -112,7 +112,17 @@ def test_seed_makes_runs_repeatable():
 # ---------------------------------------------------------------- the real result
 @pytest.mark.skipif(not OUTPUT.exists(), reason="run python -m analysis.penalty_uncertainty on the real data first")
 def test_real_interval_contains_published_point_estimate():
+    """Like for like: the interval over the hospitals the point estimate covers must contain it.
+
+    The all-penalized-hospitals interval also gives a base to penalized hospitals with none, so
+    it can only shift up; it is checked to sit at or above the like-for-like interval instead.
+    """
     t = pd.read_csv(OUTPUT)
-    assert {"national", "condition", "group"} <= set(t.level)
-    bad = t[~(t.p5_usd <= t.point_estimate_usd) | ~(t.point_estimate_usd <= t.p95_usd)]
+    same = t[t.population == "same hospitals as the point estimate"]
+    full = t[t.population == "all penalized hospitals"]
+    assert {"national", "condition", "group"} <= set(same.level)
+    bad = same[~(same.p5_usd <= same.point_estimate_usd) | ~(same.point_estimate_usd <= same.p95_usd)]
     assert bad.empty, f"point estimate outside the 90% interval:\n{bad.to_string(index=False)}"
+    m = same.merge(full, on=["level", "name"], suffixes=("_same", "_full"))
+    assert len(m) == len(same)
+    assert (m.p50_usd_full >= m.p50_usd_same - 1).all()

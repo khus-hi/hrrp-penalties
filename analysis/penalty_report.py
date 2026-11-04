@@ -56,12 +56,18 @@ def interval_block(level: str) -> str:
         return "_90% interval not computed yet: run `python -m analysis.penalty_uncertainty` before this report._"
     t = pd.read_csv(INTERVALS)
     t = t[t.level == level]
+    same = t[t.population == "same hospitals as the point estimate"].set_index("name")
+    full = t[t.population == "all penalized hospitals"].set_index("name")
     m = lambda v: f"${v / 1e6:,.1f}M"
-    rows = ["| | Point estimate | 90% interval (5th to 95th percentile) | Median of draws | Interval contains point |",
+    rows = ["| | Point estimate | 90% interval, same hospitals | Contains point | 90% interval, all penalized hospitals |",
             "|---|---|---|---|---|"]
-    rows += [f"| {r.name} | {m(r.point_estimate_usd)} | {m(r.p5_usd)} to {m(r.p95_usd)} | {m(r.p50_usd)} | "
-             f"{'yes' if r.interval_contains_point else '**no**'} |" for r in t.itertuples(index=False)]
-    return "\n".join(rows) + "\n\nHow the interval is built: [penalty_uncertainty.md](penalty_uncertainty.md)."
+    for name, r in same.iterrows():
+        f = full.loc[name]
+        rows.append(f"| {name} | {m(r.point_estimate_usd)} | {m(r.p5_usd)} to {m(r.p95_usd)} | "
+                    f"{'yes' if r.interval_contains_point else '**no**'} | {m(f.p5_usd)} to {m(f.p95_usd)} |")
+    return ("\n".join(rows) + "\n\n\"Same hospitals\" covers only hospitals with a usable cost-report base, like the "
+            "point estimate. \"All penalized hospitals\" also estimates a base for the penalized hospitals that have "
+            "none, so it sits higher. Method: [penalty_uncertainty.md](penalty_uncertainty.md).")
 
 
 def main():

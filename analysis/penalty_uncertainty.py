@@ -39,6 +39,8 @@ N_DRAWS, SEED = 10_000, 2026
 # window (Jul 2018-Jun 2021) ends where FY2026's (Jul 2021-Jun 2024) starts, and three years
 # is about the lag between the middle of FY2026's window and the FY2026 payment year.
 DRIFT_FROM = 2023
+ALL_POP = "all penalized hospitals"
+SAME_POP = "same hospitals as the point estimate"
 BLUE, INK, MUTED, GRID = "#2a78d6", "#0b0b0b", "#898781", "#e1e0d9"
 
 
@@ -261,11 +263,18 @@ def main():
     published = float(hosp.est_penalty_usd.sum())
     assert abs(point["national"][0] - published) < 1, (point["national"][0], published)
 
-    draws = U.simulate(inp, N_DRAWS, SEED)
-    table = U.interval_table(draws, point)
+    # Two populations. The point estimate covers only hospitals with a usable cost-report base, so the
+    # like-for-like check is an interval over those same hospitals. The headline interval also gives a
+    # base to penalized hospitals that have none, which can only add dollars.
     labels = {"ami": "AMI", "hf": "Heart failure", "pn": "Pneumonia", "copd": "COPD", "cabg": "CABG", "tha_tka": "Hip/knee"}
+    draws = U.simulate(inp, N_DRAWS, SEED)
+    draws_same = U.simulate(inp, N_DRAWS, SEED, impute_missing=False)
+    table = pd.concat([U.interval_table(draws, point).assign(population=ALL_POP),
+                       U.interval_table(draws_same, point).assign(population=SAME_POP)], ignore_index=True)
     table["name"] = table.name.map(lambda n: labels.get(n, n))
     table.to_csv(OUT / "penalty_interval.csv", index=False)
+    same = table[table.population == SAME_POP].reset_index(drop=True)
+    table = table[table.population == ALL_POP].reset_index(drop=True)
 
     comps = []
     for label, kw in [("All three inputs", {}),
@@ -293,10 +302,18 @@ def main():
     con.close()
 
     # ---- 3. Report -------------------------------------------------------------------------
-    show = table.assign(**{"90% interval": lambda d: d.apply(
-        lambda r: f"${r.p5_usd / 1e6:,.1f}M to ${r.p95_usd / 1e6:,.1f}M", axis=1)})
-    cols = ["name", "point_estimate_usd", "p50_usd", "90% interval", "interval_contains_point"]
-    contains_all = bool(table.interval_contains_point.all())
+    def fmt_iv(r):
+        return f"${r.p5_usd / 1e6:,.1f}M to ${r.p95_usd / 1e6:,.1f}M"
+    show = pd.DataFrame({
+        "name": table.name, "point_estimate_usd": table.point_estimate_usd,
+        "90% interval, same hospitals": same.apply(fmt_iv, axis=1),
+        "contains point": same.interval_contains_point,
+        "90% interval, all penalized hospitals": table.apply(fmt_iv, axis=1),
+        "median, all penalized": table.p50_usd})
+    cols = list(show.columns)
+    contains_all = bool(same.interval_contains_point.all())
+    snat = same[same.level == "national"].iloc[0]
+    miss = comps[comps["inputs varied"] == "Penalized hospitals with no base only"].iloc[0]
     sa_block = (f"Table 1A (wage index > 1): labor ${sa.high_labor:,.2f}, nonlabor ${sa.high_nonlabor:,.2f} "
                 f"({100 * sa.high_labor_share:.1f}% labor share). Table 1B (wage index <= 1): labor ${sa.low_labor:,.2f}, "
                 f"nonlabor ${sa.low_nonlabor:,.2f} ({100 * sa.low_labor_share:.1f}%). Read from `{rule_note}`; "
@@ -306,13 +323,21 @@ def main():
         f"_Generated {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC by `python -m analysis.penalty_uncertainty` "
         f"({N_DRAWS:,} draws, seed {SEED}). Method: `hrrp/uncertainty.py`._",
         "## Headline",
-        f"National FY2026 HRRP penalty: point estimate **${nat.point_estimate_usd / 1e6:,.1f}M**, "
-        f"90% interval **${nat.p5_usd / 1e6:,.1f}M to ${nat.p95_usd / 1e6:,.1f}M** (median ${nat.p50_usd / 1e6:,.1f}M). "
-        + ("Every interval below contains its point estimate."
+        f"National FY2026 HRRP penalty: point estimate **${nat.point_estimate_usd / 1e6:,.1f}M** "
+        f"({int(hosp.cr_base.notna().sum()):,} hospitals with a usable cost-report base).\n\n"
+        f"- **Same hospitals as the point estimate:** 90% interval ${snat.p5_usd / 1e6:,.1f}M to "
+        f"${snat.p95_usd / 1e6:,.1f}M. "
+        + ("Every interval over these hospitals contains its point estimate (national, conditions, chains)."
            if contains_all else
-           "**At least one interval below does not contain its point estimate** (see the last column). "
-           "That means the cost-report point estimate sits outside the range the two CMS sources support, "
-           "most likely because the cost reports are from earlier years (assumption A2 in penalty_method.md)."),
+           "**At least one interval over these hospitals does not contain its point estimate**; see the table.")
+        + f"\n- **All penalized hospitals:** 90% interval **${nat.p5_usd / 1e6:,.1f}M to ${nat.p95_usd / 1e6:,.1f}M** "
+        f"(median ${nat.p50_usd / 1e6:,.1f}M). This adds the {len(pen_missing)} hospitals CMS penalized that have no "
+        f"usable cost-report base (alone they add ${(miss.p5_usd - nat.point_estimate_usd) / 1e6:,.1f}M to "
+        f"${(miss.p95_usd - nat.point_estimate_usd) / 1e6:,.1f}M), so its low end can sit above the point estimate: "
+        "the point estimate leaves those hospitals at $0.\n"
+        + (f"- **Direction:** across hospitals with both bases, the Impact File total is {gap.iloc[0]['total_ratio (sum IF / sum CR)']:.3f}x "
+           "the cost-report total (section 1), so the published point estimate is more likely "
+           + ("low than high." if gap.iloc[0]["total_ratio (sum IF / sum CR)"] > 1 else "high than low.")),
         "![national interval](figures/uncertainty/national_interval.png)",
         "## 1. Cost report vs Impact File: the gap in each hospital's base",
         "**Cost-report base:** HCRIS Worksheet E Part A line 1, latest report, annualised (penalty_method.md). "
@@ -353,7 +378,7 @@ def main():
         "Observed drift in DRG payment ratios (FY2026 ratio / earlier ratio):",
         md(drift_tbl, ratio=("ratio_change_p5", "median (trend, not applied)", "p95", "trimmed_below", "trimmed_above")) if len(drift_tbl) else "_Panel not built: ratios held at CMS's values._\n",
         "### National, by condition, by chain",
-        md(show[cols], money=("point_estimate_usd", "p50_usd")),
+        md(show[cols], money=("point_estimate_usd", "median, all penalized")),
         "### Which input drives the width (national total, one input varied at a time)",
         md(comps, money=("p5_usd", "p95_usd", "width_usd")),
         "## What this does not cover",
@@ -367,7 +392,7 @@ def main():
         *(f"> {v}\n" for v in sa.snippets.values()),
     ]
     REPORT.write_text("\n\n".join(parts) + "\n")
-    print(md(show[cols], money=("point_estimate_usd", "p50_usd")))
+    print(md(show[cols], money=("point_estimate_usd", "median, all penalized")))
     print(f"Report: {REPORT}")
 
 
